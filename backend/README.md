@@ -1,45 +1,38 @@
-# Backend (Phase 1a) - FastAPI skeleton
+# IELTS Platform — Backend
 
-Setup & run (using virtualenv):
+This is the FastAPI backend application for the IELTS practice web platform. It serves the test configuration layout maps, audio assets, text contents, grading capabilities, and authentication APIs.
+
+## Quick Start
+
+Ensure you have Python 3.10+ installed.
 
 ```bash
-# from repository root
-# create virtualenv (if not exists)
-C:/Users/trand/AppData/Local/Programs/Python/Python310/python.exe -m venv .venv
-# activate (PowerShell)
+# create virtualenv (from root repository)
+python -m venv .venv
+
+# activate environment (Windows PowerShell)
 .\.venv\Scripts\Activate.ps1
-# or (bash)
+# or activate environment (Bash)
 source .venv/Scripts/activate
-# install deps
-.venv/Scripts/python.exe -m pip install -r backend/requirements.txt
-# run dev server
-.venv/Scripts/uvicorn.exe backend.app.main:app --reload --port 8000
+
+# Install requirements
+pip install -r backend/requirements.txt
+
+# Start dev server on port 8000
+uvicorn backend.app.main:app --reload --port 8000
 ```
 
-Endpoints (dev):
+The service will run at [http://localhost:8000](http://localhost:8000).
 
-- `POST /api/auth/register` — register (json: email, password)
-- `POST /api/auth/login` — login (json: email, password) -> returns access token
-- `GET /api/tests` — list tests (loaded from phase0 seed)
-- `GET /api/tests/{book}/{test}` — test details
-- `POST /api/attempts` — start an attempt
-- `PUT /api/attempts/{id}/submit` — submit attempt
+---
 
-Seed loader reads `phase0/output/cambridge_11_seed.json` automatically from workspace.
+## Database (MongoDB) Fallback
 
-Import seed into MongoDB (must run a MongoDB instance reachable at `mongodb://localhost:27017` or set `MONGODB_URI`):
+The backend connects to MongoDB (configured by `MONGODB_URI` environment variable, defaulting to `mongodb://localhost:27017`). If MongoDB is not running or is unreachable, the API falls back to **in-memory data storage** and loads test items directly from JSON file seeds.
 
+To seed the database with Cambridge tests content:
 ```bash
-# with venv activated
-.venv/Scripts/python.exe - <<'PY'
-from backend.app import seeder, db
-seed = seeder.load_seed()
-tcoll = db.tests_collection()
-acoll = db.audio_collection()
-for t in seed.get('tests',[]):
-	tcoll.update_one({'test_number': t['test_number']}, {'$set': t}, upsert=True)
-for a in seed.get('audio_assets',[]):
-	acoll.update_one({'file_name': a['file_name']}, {'$set': a}, upsert=True)
-print('imported')
-PY
+python -c "from backend.app import seeder, db; seed = seeder.load_seed(); tcoll = db.tests_collection(); acoll = db.audio_collection(); [tcoll.update_one({'test_number': t['test_number']}, {'$set': t}, upsert=True) for t in seed.get('tests',[])]; [acoll.update_one({'file_name': a['file_name']}, {'$set': a}, upsert=True) for a in seed.get('audio_assets',[])]; print('Database Seeded!')"
 ```
+
+For more info, check the [Root README](file:///d:/Git/practice_IELTS_web/README.md).

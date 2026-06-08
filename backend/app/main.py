@@ -189,6 +189,13 @@ PRACTICE_LAYOUTS = {
                     {"range": "37-40", "title": "Questions 37-40", "page": 30}
                 ]
             },
+        ],
+        "writing": [
+            {"task": 1, "pages": [31]},
+            {"task": 2, "pages": [32]}
+        ],
+        "speaking": [
+            {"part": 1, "pages": [33]}
         ]
     },
     2: {
@@ -226,6 +233,13 @@ PRACTICE_LAYOUTS = {
                     {"range": "34-40", "title": "Questions 34-40", "page": 54}
                 ]
             },
+        ],
+        "writing": [
+            {"task": 1, "pages": [55]},
+            {"task": 2, "pages": [56]}
+        ],
+        "speaking": [
+            {"part": 1, "pages": [57]}
         ]
     },
     3: {
@@ -261,6 +275,13 @@ PRACTICE_LAYOUTS = {
                     {"range": "35-40", "title": "Questions 35-40", "page": 77}
                 ]
             },
+        ],
+        "writing": [
+            {"task": 1, "pages": [78]},
+            {"task": 2, "pages": [79]}
+        ],
+        "speaking": [
+            {"part": 1, "pages": [80]}
         ]
     },
     4: {
@@ -298,6 +319,13 @@ PRACTICE_LAYOUTS = {
                     {"range": "37-40", "title": "Questions 37-40", "page": 100}
                 ]
             },
+        ],
+        "writing": [
+            {"task": 1, "pages": [101]},
+            {"task": 2, "pages": [102]}
+        ],
+        "speaking": [
+            {"part": 1, "pages": [103]}
         ]
     }
 }

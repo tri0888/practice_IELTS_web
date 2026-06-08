@@ -18,6 +18,10 @@
     "strict": false,
     "noEmit": true,
     "incremental": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"]
+    },
     "plugins": [
       {
         "name": "next"
@@ -27,6 +31,7 @@
   "include": [
     "app",
     "pages",
+    "components",
     "next-env.d.ts",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"

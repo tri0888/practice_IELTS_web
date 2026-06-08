@@ -45,6 +45,13 @@ LAYOUTS = {
                 "questions": "27-40",
             },
         },
+        "writing": {
+            "task_1": {"pages": [31]},
+            "task_2": {"pages": [32]},
+        },
+        "speaking": {
+            "pages": [33],
+        },
     },
     2: {
         "listening": {
@@ -72,6 +79,13 @@ LAYOUTS = {
                 "title": "Neuroaesthetics",
                 "questions": "27-40",
             },
+        },
+        "writing": {
+            "task_1": {"pages": [55]},
+            "task_2": {"pages": [56]},
+        },
+        "speaking": {
+            "pages": [57],
         },
     },
     3: {
@@ -101,6 +115,13 @@ LAYOUTS = {
                 "questions": "27-40",
             },
         },
+        "writing": {
+            "task_1": {"pages": [78]},
+            "task_2": {"pages": [79]},
+        },
+        "speaking": {
+            "pages": [80],
+        },
     },
     4: {
         "listening": {
@@ -128,6 +149,13 @@ LAYOUTS = {
                 "title": "'This Marvellous Invention'",
                 "questions": "27-40",
             },
+        },
+        "writing": {
+            "task_1": {"pages": [101]},
+            "task_2": {"pages": [102]},
+        },
+        "speaking": {
+            "pages": [103],
         },
     },
 }
@@ -183,6 +211,37 @@ def build_test_content(doc: fitz.Document, test_num: int) -> dict:
             }
         )
 
+    # Extract Writing tasks
+    writing_layout = layout.get("writing", {})
+    if writing_layout:
+        result["writing"] = {
+            "total_questions": 2,
+            "duration_minutes": 60,
+            "tasks": []
+        }
+        for task_key in ["task_1", "task_2"]:
+            task_info = writing_layout[task_key]
+            task_num = int(task_key.split("_")[1])
+            task_text = extract_pages_text(doc, task_info["pages"])
+            result["writing"]["tasks"].append({
+                "task_number": task_num,
+                "pages": task_info["pages"],
+                "content_text": task_text,
+            })
+
+    # Extract Speaking parts
+    speaking_layout = layout.get("speaking", {})
+    if speaking_layout:
+        result["speaking"] = {
+            "parts": []
+        }
+        speaking_text = extract_pages_text(doc, speaking_layout["pages"])
+        result["speaking"]["parts"].append({
+            "part_number": 1,
+            "pages": speaking_layout["pages"],
+            "content_text": speaking_text,
+        })
+
     return result
 
 def main():
@@ -213,6 +272,10 @@ def main():
         print(f"Wrote {output_path.name}")
         print(f"  Listening: {len(content['listening']['sections'])} sections")
         print(f"  Reading: {len(content['reading']['passages'])} passages")
+        if "writing" in content:
+            print(f"  Writing: {len(content['writing']['tasks'])} tasks")
+        if "speaking" in content:
+            print(f"  Speaking: {len(content['speaking']['parts'])} parts")
 
     doc.close()
 
