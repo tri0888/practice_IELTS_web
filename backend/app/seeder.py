@@ -34,16 +34,33 @@ def find_test(seed: dict, book: int, test_number: int) -> dict | None:
 
 
 def collect_reading_answers(seed: dict, test_number: int) -> dict:
-    """Return a mapping question_number -> answer_text for the given test."""
+    """Return a mapping question_number -> answer_text for the given test (Reading passages)."""
     t = find_test(seed, 11, test_number)
     if not t:
         return {}
     mapping = {}
     for section in t.get("sections", []):
-        for row in section.get("rows", []):
-            q = int(row.get("question_number"))
-            a = row.get("answer_text")
-            mapping[q] = a
+        if section.get("name", "").lower().startswith("passage"):
+            for row in section.get("rows", []):
+                q = int(row.get("question_number"))
+                a = row.get("answer_text")
+                mapping[q] = a
+    return mapping
+
+
+def collect_listening_answers(seed: dict, test_number: int) -> dict:
+    """Return a mapping question_number -> answer_text for the given test (Listening sections)."""
+    t = find_test(seed, 11, test_number)
+    if not t:
+        return {}
+    mapping = {}
+    for section in t.get("sections", []):
+        name = section.get("name", "").lower()
+        if name.startswith("section") or name.startswith("listening"):
+            for row in section.get("rows", []):
+                q = int(row.get("question_number"))
+                a = row.get("answer_text")
+                mapping[q] = a
     return mapping
 
 

@@ -12,7 +12,7 @@ import fitz
 from . import seeder, db
 from .auth import create_access_token, create_user, verify_user
 
-app = FastAPI(title="IELTS Backend - Phase1a")
+app = FastAPI(title="IELTS Backend - Phase1b")
 
 app.add_middleware(
     CORSMiddleware,
@@ -23,6 +23,21 @@ app.add_middleware(
 
 seed = seeder.load_seed()
 in_memory_attempts = {}
+
+
+@lru_cache(maxsize=4)
+def load_test_content(book: int, test: int) -> dict | None:
+    repo_root = Path(__file__).resolve().parents[2]
+    content_path = repo_root / "phase0" / "output" / f"cambridge_{book}_test{test}_content.json"
+    if content_path.exists():
+        import json
+        return json.loads(content_path.read_text(encoding="utf-8"))
+    # Fallback: check for the generic content file (test 1 only for now)
+    content_path = repo_root / "phase0" / "output" / f"cambridge_{book}_test1_content.json"
+    if content_path.exists() and test == 1:
+        import json
+        return json.loads(content_path.read_text(encoding="utf-8"))
+    return None
 
 
 @lru_cache(maxsize=1)
@@ -140,11 +155,8 @@ def get_test_audio(book: int, test: int):
     return seeder.collect_audio_assets(seed, test)
 
 
-@app.get("/api/tests/{book}/{test}/practice")
-def get_practice_layout(book: int, test: int):
-    if book != 11 or test != 1:
-        raise HTTPException(status_code=404, detail="practice layout only prepared for Cambridge 11 Test 1")
-    return {
+PRACTICE_LAYOUTS = {
+    1: {
         "listening": [
             {"section": 1, "pages": [11, 12]},
             {"section": 2, "pages": [13, 14]},
@@ -152,11 +164,175 @@ def get_practice_layout(book: int, test: int):
             {"section": 4, "pages": [17, 18]},
         ],
         "reading": [
-            {"passage": 1, "pages": [19, 20, 21]},
-            {"passage": 2, "pages": [22, 23, 24, 25]},
-            {"passage": 3, "pages": [26, 27, 28, 29, 30]},
+            {
+                "passage": 1,
+                "passage_pages": [19, 20],
+                "groups": [
+                    {"range": "1-7", "title": "Questions 1-7", "page": 21},
+                    {"range": "8-13", "title": "Questions 8-13", "page": 21}
+                ]
+            },
+            {
+                "passage": 2,
+                "passage_pages": [22, 23],
+                "groups": [
+                    {"range": "14-19", "title": "Questions 14-19", "page": 24},
+                    {"range": "20-26", "title": "Questions 20-26", "page": 25}
+                ]
+            },
+            {
+                "passage": 3,
+                "passage_pages": [26, 27],
+                "groups": [
+                    {"range": "27-29", "title": "Questions 27-29", "page": 28},
+                    {"range": "30-36", "title": "Questions 30-36", "page": 29},
+                    {"range": "37-40", "title": "Questions 37-40", "page": 30}
+                ]
+            },
+        ]
+    },
+    2: {
+        "listening": [
+            {"section": 1, "pages": [34, 35]},
+            {"section": 2, "pages": [36, 37]},
+            {"section": 3, "pages": [38, 39]},
+            {"section": 4, "pages": [40, 41]},
         ],
+        "reading": [
+            {
+                "passage": 1,
+                "passage_pages": [42, 43],
+                "groups": [
+                    {"range": "1-4", "title": "Questions 1-4", "page": 44},
+                    {"range": "5-8", "title": "Questions 5-8", "page": 44},
+                    {"range": "9-13", "title": "Questions 9-13", "page": 45}
+                ]
+            },
+            {
+                "passage": 2,
+                "passage_pages": [47, 48],
+                "groups": [
+                    {"range": "14-20", "title": "Questions 14-20", "page": 46},
+                    {"range": "21-24", "title": "Questions 21-24", "page": 49},
+                    {"range": "25-26", "title": "Questions 25-26", "page": 49}
+                ]
+            },
+            {
+                "passage": 3,
+                "passage_pages": [50, 51],
+                "groups": [
+                    {"range": "27-30", "title": "Questions 27-30", "page": 52},
+                    {"range": "31-33", "title": "Questions 31-33", "page": 53},
+                    {"range": "34-40", "title": "Questions 34-40", "page": 54}
+                ]
+            },
+        ]
+    },
+    3: {
+        "listening": [
+            {"section": 1, "pages": [58, 59]},
+            {"section": 2, "pages": [60, 61]},
+            {"section": 3, "pages": [62, 63]},
+            {"section": 4, "pages": [64, 65]},
+        ],
+        "reading": [
+            {
+                "passage": 1,
+                "passage_pages": [66, 67],
+                "groups": [
+                    {"range": "1-9", "title": "Questions 1-9", "page": 68},
+                    {"range": "10-13", "title": "Questions 10-13", "page": 69}
+                ]
+            },
+            {
+                "passage": 2,
+                "passage_pages": [70, 71],
+                "groups": [
+                    {"range": "14-18", "title": "Questions 14-18", "page": 72},
+                    {"range": "19-22", "title": "Questions 19-22", "page": 73},
+                    {"range": "23-26", "title": "Questions 23-26", "page": 73}
+                ]
+            },
+            {
+                "passage": 3,
+                "passage_pages": [74, 75],
+                "groups": [
+                    {"range": "27-34", "title": "Questions 27-34", "page": 76},
+                    {"range": "35-40", "title": "Questions 35-40", "page": 77}
+                ]
+            },
+        ]
+    },
+    4: {
+        "listening": [
+            {"section": 1, "pages": [81, 82]},
+            {"section": 2, "pages": [83, 84]},
+            {"section": 3, "pages": [85, 86]},
+            {"section": 4, "pages": [87]},
+        ],
+        "reading": [
+            {
+                "passage": 1,
+                "passage_pages": [88, 89],
+                "groups": [
+                    {"range": "1-4", "title": "Questions 1-4", "page": 90},
+                    {"range": "5-9", "title": "Questions 5-9", "page": 90},
+                    {"range": "10-13", "title": "Questions 10-13", "page": 91}
+                ]
+            },
+            {
+                "passage": 2,
+                "passage_pages": [92, 93],
+                "groups": [
+                    {"range": "14-18", "title": "Questions 14-18", "page": 94},
+                    {"range": "19-23", "title": "Questions 19-23", "page": 95},
+                    {"range": "24-26", "title": "Questions 24-26", "page": 96}
+                ]
+            },
+            {
+                "passage": 3,
+                "passage_pages": [98, 99],
+                "groups": [
+                    {"range": "27-32", "title": "Questions 27-32", "page": 97},
+                    {"range": "33-36", "title": "Questions 33-36", "page": 100},
+                    {"range": "37-40", "title": "Questions 37-40", "page": 100}
+                ]
+            },
+        ]
     }
+}
+
+
+@app.get("/api/tests/{book}/{test}/practice")
+def get_practice_layout(book: int, test: int):
+    if book != 11 or test not in PRACTICE_LAYOUTS:
+        raise HTTPException(status_code=404, detail="practice layout only prepared for Cambridge 11")
+    return PRACTICE_LAYOUTS[test]
+
+
+@app.get("/api/tests/{book}/{test}/content")
+def get_test_content(book: int, test: int):
+    """Return structured text content (passages + questions) extracted from PDF."""
+    content = load_test_content(book, test)
+    if not content:
+        raise HTTPException(status_code=404, detail="Content not available for this test")
+    return content
+
+
+@app.get("/api/tests/{book}/{test}/answers")
+def get_test_answers(book: int, test: int):
+    """Return answer key from the seed data."""
+    t = seeder.find_test(seed, book, test)
+    if not t:
+        raise HTTPException(status_code=404, detail="test not found")
+    answers = {}
+    for section in t.get("sections", []):
+        for row in section.get("rows", []):
+            answers[row["question_number"]] = {
+                "answer": row.get("answer_text", ""),
+                "explanation": row.get("explanation_text", ""),
+            }
+    return {"book": book, "test": test, "answers": answers}
 
 
 @app.get("/api/tests/{book}/{test}/{skill}")
@@ -195,8 +371,13 @@ def submit_attempt(attempt_id: str, body: AttemptSubmit):
         if attempt is None:
             raise HTTPException(status_code=404, detail="attempt not found")
         # grade
-        if attempt.get("skill", "").lower().startswith("passage") or attempt.get("skill", "").lower() == "reading":
-            correct = seeder.collect_reading_answers(seed, attempt["test"])
+        is_reading = attempt.get("skill", "").lower().startswith("passage") or attempt.get("skill", "").lower() == "reading"
+        is_listening = attempt.get("skill", "").lower() == "listening"
+        if is_reading or is_listening:
+            if is_reading:
+                correct = seeder.collect_reading_answers(seed, attempt["test"])
+            else:
+                correct = seeder.collect_listening_answers(seed, attempt["test"])
             total = 0
             right = 0
             for r in body.responses:
@@ -215,8 +396,13 @@ def submit_attempt(attempt_id: str, body: AttemptSubmit):
         if not attempt:
             raise HTTPException(status_code=404, detail="attempt not found")
         attempt["responses"] = body.responses
-        if attempt["skill"].lower().startswith("passage") or attempt["skill"].lower() == "reading":
-            correct = seeder.collect_reading_answers(seed, attempt["test"])
+        is_reading = attempt.get("skill", "").lower().startswith("passage") or attempt.get("skill", "").lower() == "reading"
+        is_listening = attempt.get("skill", "").lower() == "listening"
+        if is_reading or is_listening:
+            if is_reading:
+                correct = seeder.collect_reading_answers(seed, attempt["test"])
+            else:
+                correct = seeder.collect_listening_answers(seed, attempt["test"])
             total = 0
             right = 0
             for r in body.responses:
@@ -282,3 +468,5 @@ def stream_audio(file_name: str):
 def get_pdf_page_image(page_number: int):
     pdf_path = render_pdf_page(page_number)
     return FileResponse(path=pdf_path, media_type="image/png")
+
+
