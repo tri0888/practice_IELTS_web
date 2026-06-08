@@ -18,8 +18,8 @@ type SkillInfo = {
 const SKILLS: SkillInfo[] = [
   { key: 'listening', label: 'Listening', emoji: '🎧', duration: '30 phút', questions: 40, color: '#3b82f6', available: true },
   { key: 'reading', label: 'Reading', emoji: '📖', duration: '60 phút', questions: 40, color: '#22c55e', available: true },
-  { key: 'writing', label: 'Writing', emoji: '✍️', duration: '60 phút', questions: 2, color: '#f59e0b', available: false },
-  { key: 'speaking', label: 'Speaking', emoji: '🎙️', duration: '11-14 phút', questions: 3, color: '#8b5cf6', available: false },
+  { key: 'writing', label: 'Writing', emoji: '✍️', duration: '60 phút', questions: 2, color: '#f59e0b', available: true },
+  { key: 'speaking', label: 'Speaking', emoji: '🎙️', duration: '11-14 phút', questions: 3, color: '#8b5cf6', available: true },
 ]
 
 export default function TestDetailPage() {

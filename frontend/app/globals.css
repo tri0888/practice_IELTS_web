@@ -191,6 +191,23 @@ h1, h2, h3, h4, h5 {
   animation: pulse 1s ease-in-out infinite;
 }
 
+.record-badge {
+  background: var(--ielts-red);
+  color: white;
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.record-badge.pulse {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.7; }
@@ -559,9 +576,15 @@ h1, h2, h3, h4, h5 {
 /* -------- Test Library Cards -------- */
 .book-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--sp-6);
   padding: var(--sp-6);
+}
+
+@media (max-width: 1024px) {
+  .book-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .test-card {

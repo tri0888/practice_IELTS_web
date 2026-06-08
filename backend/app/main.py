@@ -191,8 +191,8 @@ PRACTICE_LAYOUTS = {
             },
         ],
         "writing": [
-            {"task": 1, "pages": [31]},
-            {"task": 2, "pages": [32]}
+            {"task": 1, "pages": [31], "model_answer_pages": [133]},
+            {"task": 2, "pages": [32], "model_answer_pages": [134]}
         ],
         "speaking": [
             {"part": 1, "pages": [33]}
@@ -235,8 +235,8 @@ PRACTICE_LAYOUTS = {
             },
         ],
         "writing": [
-            {"task": 1, "pages": [55]},
-            {"task": 2, "pages": [56]}
+            {"task": 1, "pages": [55], "model_answer_pages": [135]},
+            {"task": 2, "pages": [56], "model_answer_pages": [136]}
         ],
         "speaking": [
             {"part": 1, "pages": [57]}
@@ -277,8 +277,8 @@ PRACTICE_LAYOUTS = {
             },
         ],
         "writing": [
-            {"task": 1, "pages": [78]},
-            {"task": 2, "pages": [79]}
+            {"task": 1, "pages": [78], "model_answer_pages": [137]},
+            {"task": 2, "pages": [79], "model_answer_pages": [138]}
         ],
         "speaking": [
             {"part": 1, "pages": [80]}
@@ -321,8 +321,8 @@ PRACTICE_LAYOUTS = {
             },
         ],
         "writing": [
-            {"task": 1, "pages": [101]},
-            {"task": 2, "pages": [102]}
+            {"task": 1, "pages": [101], "model_answer_pages": [139]},
+            {"task": 2, "pages": [102], "model_answer_pages": [140]}
         ],
         "speaking": [
             {"part": 1, "pages": [103]}

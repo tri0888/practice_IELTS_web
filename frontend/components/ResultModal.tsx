@@ -11,6 +11,7 @@ interface ResultModalProps {
   bandScore: string
   onClose: () => void
   backUrl: string
+  customMessage?: string
 }
 
 export default function ResultModal({
@@ -23,6 +24,7 @@ export default function ResultModal({
   bandScore,
   onClose,
   backUrl,
+  customMessage,
 }: ResultModalProps) {
   if (!isOpen) return null
 
@@ -43,21 +45,39 @@ export default function ResultModal({
         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: 24 }}>
           Cambridge IELTS 11 — Test {testNumber}
         </p>
-        <div className="result-card__score">
-          {correctCount ?? '?'}/{totalCount ?? 40}
-        </div>
-        <div className="result-card__band" style={{ marginTop: 8 }}>
-          Correct Answers
-        </div>
-        <div style={{
-          marginTop: 16,
-          padding: '8px 16px',
-          background: 'var(--bg-primary)',
-          borderRadius: 'var(--radius-md)',
-          fontSize: '0.9rem',
-        }}>
-          Band Score: <strong style={{ color: 'var(--ielts-red)' }}>{bandScore}</strong>
-        </div>
+        
+        {customMessage ? (
+          <div style={{
+            padding: '12px 16px',
+            background: 'var(--bg-primary)',
+            borderRadius: 'var(--radius-md)',
+            fontSize: '0.85rem',
+            lineHeight: 1.6,
+            color: 'var(--text-secondary)',
+            textAlign: 'justify',
+          }}>
+            {customMessage}
+          </div>
+        ) : (
+          <>
+            <div className="result-card__score">
+              {correctCount ?? '?'}/{totalCount ?? 40}
+            </div>
+            <div className="result-card__band" style={{ marginTop: 8 }}>
+              Correct Answers
+            </div>
+            <div style={{
+              marginTop: 16,
+              padding: '8px 16px',
+              background: 'var(--bg-primary)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '0.9rem',
+            }}>
+              Band Score: <strong style={{ color: 'var(--ielts-red)' }}>{bandScore}</strong>
+            </div>
+          </>
+        )}
+
         <div style={{ display: 'flex', gap: 12, marginTop: 24, justifyContent: 'center' }}>
           <Link href={backUrl}>
             <button className="btn btn-secondary">Quay lại</button>

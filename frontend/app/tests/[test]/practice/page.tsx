@@ -50,25 +50,29 @@ export default function PracticeHubPage() {
           </div>
         </Link>
 
-        {/* Writing (Coming Soon) */}
-        <div className="card" style={{ textAlign: 'center', padding: 32, opacity: 0.5 }}>
-          <div style={{ fontSize: '3rem', marginBottom: 12 }}>✍️</div>
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 8 }}>Writing</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 16 }}>
-            2 tasks • 60 phút
-          </p>
-          <div className="btn btn-secondary" style={{ width: '100%' }}>Phase 1c</div>
-        </div>
+        {/* Writing */}
+        <Link href={`/tests/${test}/practice/writing`} style={{ textDecoration: 'none', color: 'inherit' }}>
+          <div className="card" style={{ cursor: 'pointer', textAlign: 'center', padding: 32 }}>
+            <div style={{ fontSize: '3rem', marginBottom: 12 }}>✍️</div>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 8 }}>Writing</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 16 }}>
+              2 tasks • 60 phút
+            </p>
+            <div className="btn btn-primary" style={{ width: '100%' }}>Bắt đầu</div>
+          </div>
+        </Link>
 
-        {/* Speaking (Coming Soon) */}
-        <div className="card" style={{ textAlign: 'center', padding: 32, opacity: 0.5 }}>
-          <div style={{ fontSize: '3rem', marginBottom: 12 }}>🎙️</div>
-          <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 8 }}>Speaking</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 16 }}>
-            3 parts • 11-14 phút
-          </p>
-          <div className="btn btn-secondary" style={{ width: '100%' }}>Phase 1c</div>
-        </div>
+        {/* Speaking */}
+        <Link href={`/tests/${test}/practice/speaking`} style={{ textDecoration: 'none', color: 'inherit' }}>
+          <div className="card" style={{ cursor: 'pointer', textAlign: 'center', padding: 32 }}>
+            <div style={{ fontSize: '3rem', marginBottom: 12 }}>🎙️</div>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 8 }}>Speaking</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 16 }}>
+              3 parts • 11-14 phút
+            </p>
+            <div className="btn btn-primary" style={{ width: '100%' }}>Bắt đầu</div>
+          </div>
+        </Link>
       </div>
     </div>
   )
