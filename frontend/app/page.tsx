@@ -1,4 +1,5 @@
 "use client"
+import { useMemo } from 'react'
 import useSWR from 'swr'
 import Link from 'next/link'
 
@@ -13,6 +14,26 @@ const SKILL_ICONS: Record<string, { emoji: string; color: string }> = {
 
 export default function TestLibraryPage() {
   const { data, error, isLoading } = useSWR('/api/tests', fetcher)
+
+  // Group tests by book
+  const testsByBook = useMemo(() => {
+    if (!data || !Array.isArray(data)) return {}
+    const grouped: Record<number, any[]> = {}
+    data.forEach((t: any) => {
+      const b = t.book ?? 11
+      if (!grouped[b]) grouped[b] = []
+      grouped[b].push(t)
+    })
+    // Sort tests within each book by test_number
+    Object.keys(grouped).forEach((b: any) => {
+      grouped[b].sort((a: any, b: any) => a.test_number - b.test_number)
+    })
+    return grouped
+  }, [data])
+
+  const sortedBooks = useMemo(() => {
+    return Object.keys(testsByBook).map(Number).sort((a, b) => a - b)
+  }, [testsByBook])
 
   return (
     <div className="container fade-in">
@@ -57,12 +78,12 @@ export default function TestLibraryPage() {
           position: 'relative',
         }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>20</div>
-            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Books</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>10</div>
+            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Books (11-20)</div>
           </div>
           <div style={{ width: 1, background: 'rgba(255,255,255,0.15)' }} />
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>80</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>40</div>
             <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tests</div>
           </div>
           <div style={{ width: 1, background: 'rgba(255,255,255,0.15)' }} />
@@ -73,12 +94,6 @@ export default function TestLibraryPage() {
         </div>
       </div>
 
-      {/* Book 11 Section */}
-      <div style={{ marginBottom: '16px' }}>
-        <h2 style={{ fontSize: '1.3rem', fontWeight: 700 }}>Cambridge IELTS 11</h2>
-        <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Academic • 4 Tests</p>
-      </div>
-
       {error && (
         <div style={{
           background: '#fef2f2',
@@ -86,63 +101,85 @@ export default function TestLibraryPage() {
           borderRadius: 'var(--radius-md)',
           padding: '16px',
           color: '#991b1b',
+          marginBottom: '24px',
         }}>
           ⚠️ Không thể tải danh sách bài test. Hãy đảm bảo backend đang chạy.
         </div>
       )}
 
       {isLoading && (
-        <div className="book-grid">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="test-card" style={{ pointerEvents: 'none' }}>
-              <div className="test-card__header">
-                <div className="skeleton" style={{ width: 80, height: 12, marginBottom: 8 }} />
-                <div className="skeleton" style={{ width: 120, height: 20 }} />
+        <>
+          {[11, 12].map((bk) => (
+            <div key={bk} style={{ marginBottom: '40px' }}>
+              <div style={{ marginBottom: '16px' }}>
+                <div className="skeleton" style={{ width: 180, height: 20, marginBottom: 8 }} />
+                <div className="skeleton" style={{ width: 120, height: 14 }} />
               </div>
-              <div className="test-card__body">
-                <div className="test-card__skills">
-                  {[1, 2, 3, 4].map(j => (
-                    <div key={j} className="skeleton" style={{ height: 36 }} />
-                  ))}
-                </div>
+              <div className="book-grid" style={{ paddingLeft: 0, paddingRight: 0 }}>
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className="test-card" style={{ pointerEvents: 'none' }}>
+                    <div className="test-card__header">
+                      <div className="skeleton" style={{ width: 80, height: 12, marginBottom: 8 }} />
+                      <div className="skeleton" style={{ width: 120, height: 20 }} />
+                    </div>
+                    <div className="test-card__body">
+                      <div className="test-card__skills">
+                        {[1, 2, 3, 4].map(j => (
+                          <div key={j} className="skeleton" style={{ height: 36 }} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))}
-        </div>
+        </>
       )}
 
-      {data && (
-        <div className="book-grid">
-          {data.map((t: any) => (
-            <Link
-              key={t.test_number}
-              href={`/tests/${t.test_number}`}
-              style={{ textDecoration: 'none', color: 'inherit' }}
-            >
-              <div className="test-card slide-up" style={{ animationDelay: `${(t.test_number - 1) * 100}ms` }}>
-                <div className="test-card__header">
-                  <div className="test-card__book">Cambridge IELTS 11</div>
-                  <div className="test-card__title">Test {t.test_number}</div>
-                </div>
-                <div className="test-card__body">
-                  <div className="test-card__skills">
-                    {Object.entries(SKILL_ICONS).map(([skill, info]) => (
-                      <div key={skill} className="test-card__skill">
-                        <span>{info.emoji}</span>
-                        <span style={{ textTransform: 'capitalize' }}>{skill}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="test-card__actions">
-                    <button className="btn btn-primary btn-sm" style={{ flex: 1 }}>
-                      Start Test
-                    </button>
-                  </div>
-                </div>
+      {data && Array.isArray(data) && (
+        <>
+          {sortedBooks.map((book) => (
+            <div key={book} style={{ marginBottom: '40px' }}>
+              <div style={{ marginBottom: '16px', borderLeft: '4px solid var(--ielts-red)', paddingLeft: '12px' }}>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0 }}>Cambridge IELTS {book}</h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: '4px 0 0' }}>Academic • {testsByBook[book].length} Tests Available</p>
               </div>
-            </Link>
+
+              <div className="book-grid" style={{ paddingLeft: 0, paddingRight: 0 }}>
+                {testsByBook[book].map((t: any) => (
+                  <Link
+                    key={t.test_number}
+                    href={`/tests/${book}/${t.test_number}`}
+                    style={{ textDecoration: 'none', color: 'inherit' }}
+                  >
+                    <div className="test-card slide-up" style={{ animationDelay: `${(t.test_number - 1) * 100}ms` }}>
+                      <div className="test-card__header">
+                        <div className="test-card__book">Cambridge IELTS {book}</div>
+                        <div className="test-card__title">Test {t.test_number}</div>
+                      </div>
+                      <div className="test-card__body">
+                        <div className="test-card__skills">
+                          {Object.entries(SKILL_ICONS).map(([skill, info]) => (
+                            <div key={skill} className="test-card__skill">
+                              <span>{info.emoji}</span>
+                              <span style={{ textTransform: 'capitalize' }}>{skill}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="test-card__actions">
+                          <button className="btn btn-primary btn-sm" style={{ flex: 1 }}>
+                            Bắt đầu
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
           ))}
-        </div>
+        </>
       )}
     </div>
   )

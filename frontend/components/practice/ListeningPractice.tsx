@@ -61,10 +61,11 @@ type ContentData = {
 }
 
 interface ListeningPracticeProps {
+  book: string
   test: string
 }
 
-export default function ListeningPractice({ test }: ListeningPracticeProps) {
+export default function ListeningPractice({ book, test }: ListeningPracticeProps) {
   const [content, setContent] = useState<ContentData | null>(null)
   const [practiceLayout, setPracticeLayout] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -83,7 +84,7 @@ export default function ListeningPractice({ test }: ListeningPracticeProps) {
     let cancelled = false
     async function load() {
       try {
-        const resp = await fetch(`${BACKEND}/tests/11/${test}/content`)
+        const resp = await fetch(`${BACKEND}/tests/${book}/${test}/content`)
         if (!resp.ok) throw new Error('Failed to load')
         const data = await resp.json()
         if (!cancelled) {
@@ -96,7 +97,7 @@ export default function ListeningPractice({ test }: ListeningPracticeProps) {
 
         // Load practice layout
         try {
-          const practiceResp = await fetch(`${BACKEND}/tests/11/${test}/practice`)
+          const practiceResp = await fetch(`${BACKEND}/tests/${book}/${test}/practice`)
           if (practiceResp.ok) {
             const practiceData = await practiceResp.json()
             if (!cancelled) setPracticeLayout(practiceData)
@@ -112,7 +113,7 @@ export default function ListeningPractice({ test }: ListeningPracticeProps) {
         const attemptResp = await fetch(`${BACKEND}/attempts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ book: 11, test: Number(test), skill: 'listening' }),
+          body: JSON.stringify({ book: Number(book), test: Number(test), skill: 'listening' }),
         })
         const attemptData = await attemptResp.json()
         if (!cancelled) setAttemptId(attemptData.id)
@@ -124,7 +125,7 @@ export default function ListeningPractice({ test }: ListeningPracticeProps) {
     }
     load()
     return () => { cancelled = true }
-  }, [test])
+  }, [book, test])
 
   // Timer
   useEffect(() => {
@@ -189,7 +190,7 @@ export default function ListeningPractice({ test }: ListeningPracticeProps) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ responses }),
         }),
-        fetch(`${BACKEND}/tests/11/${test}/answers`),
+        fetch(`${BACKEND}/tests/${book}/${test}/answers`),
       ])
       const submitData = await submitResp.json()
       setResult(submitData.result)
@@ -277,7 +278,7 @@ export default function ListeningPractice({ test }: ListeningPracticeProps) {
       <div className="exam-bar">
         <div className="exam-bar__info">
           <span className="exam-bar__badge">Listening</span>
-          <span>Cambridge IELTS 11 — Test {test}</span>
+          <span>Cambridge IELTS {book} — Test {test}</span>
           <span style={{ color: 'rgba(255,255,255,0.5)' }}>
             {answeredCount}/40 đã trả lời
           </span>
@@ -296,7 +297,7 @@ export default function ListeningPractice({ test }: ListeningPracticeProps) {
 
       <div className="split-view" style={{ gridTemplateColumns: '1.2fr 1px 1fr' }}>
         {/* Left: PDF Questions */}
-        <PDFViewer pages={activeSectionPages} />
+        <PDFViewer book={book} test={parseInt(test, 10)} partKey={`listening_${activeSection + 1}`} pages={activeSectionPages} />
 
         {/* Divider */}
         <div className="split-view__divider" />
@@ -470,7 +471,7 @@ export default function ListeningPractice({ test }: ListeningPracticeProps) {
         totalCount={result?.total ?? 40}
         bandScore={estimateListeningBand(result?.correct ?? 0)}
         onClose={() => setShowResult(false)}
-        backUrl={`/tests/${test}`}
+        backUrl={`/tests/${book}/${test}`}
       />
     </div>
   )

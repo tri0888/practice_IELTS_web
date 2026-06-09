@@ -4,8 +4,9 @@ import { useParams } from 'next/navigation'
 import ReadingPractice from '@/components/practice/ReadingPractice'
 
 export default function ReadingPracticePage() {
-  const params = useParams<{ test: string }>()
+  const params = useParams<{ book: string; test: string }>()
+  const book = params?.book ?? '11'
   const test = params?.test ?? '1'
 
-  return <ReadingPractice test={test} />
+  return <ReadingPractice book={book} test={test} />
 }

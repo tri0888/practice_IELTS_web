@@ -21,10 +21,11 @@ type ContentData = {
 }
 
 interface SpeakingPracticeProps {
+  book: string
   test: string
 }
 
-export default function SpeakingPractice({ test }: SpeakingPracticeProps) {
+export default function SpeakingPractice({ book, test }: SpeakingPracticeProps) {
   const [content, setContent] = useState<ContentData | null>(null)
   const [loading, setLoading] = useState(true)
   const [activePartIndex, setActivePartIndex] = useState(0)
@@ -54,7 +55,7 @@ export default function SpeakingPractice({ test }: SpeakingPracticeProps) {
     let cancelled = false
     async function load() {
       try {
-        const resp = await fetch(`${BACKEND}/tests/11/${test}/content`)
+        const resp = await fetch(`${BACKEND}/tests/${book}/${test}/content`)
         if (!resp.ok) throw new Error('Failed to load')
         const data = await resp.json()
         if (!cancelled) {
@@ -65,7 +66,7 @@ export default function SpeakingPractice({ test }: SpeakingPracticeProps) {
         const attemptResp = await fetch(`${BACKEND}/attempts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ book: 11, test: Number(test), skill: 'speaking' }),
+          body: JSON.stringify({ book: Number(book), test: Number(test), skill: 'speaking' }),
         })
         const attemptData = await attemptResp.json()
         if (!cancelled) setAttemptId(attemptData.id)
@@ -77,7 +78,7 @@ export default function SpeakingPractice({ test }: SpeakingPracticeProps) {
     }
     load()
     return () => { cancelled = true }
-  }, [test])
+  }, [book, test])
 
   // Exam timer
   useEffect(() => {
@@ -251,7 +252,7 @@ export default function SpeakingPractice({ test }: SpeakingPracticeProps) {
       <div className="exam-bar">
         <div className="exam-bar__info">
           <span className="exam-bar__badge" style={{ backgroundColor: 'var(--accent-purple)' }}>Speaking</span>
-          <span>Cambridge IELTS 11 — Test {test}</span>
+          <span>Cambridge IELTS {book} — Test {test}</span>
           <span style={{ color: 'rgba(255,255,255,0.5)' }}>
             Recordings: {recordings[1] ? '✓ Part 1' : '✗ Part 1'} | {recordings[2] ? '✓ Part 2' : '✗ Part 2'} | {recordings[3] ? '✓ Part 3' : '✗ Part 3'}
           </span>
@@ -270,7 +271,7 @@ export default function SpeakingPractice({ test }: SpeakingPracticeProps) {
 
       <div className="split-view" style={{ gridTemplateColumns: '1.2fr 1px 1.2fr' }}>
         {/* Left Panel: PDF Speaking Prompts */}
-        <PDFViewer pages={activePages} />
+        <PDFViewer book={book} test={parseInt(test, 10)} partKey="speaking" pages={activePages} />
 
         {/* Divider */}
         <div className="split-view__divider" />
@@ -381,7 +382,7 @@ export default function SpeakingPractice({ test }: SpeakingPracticeProps) {
         totalCount={0}
         bandScore="Saved"
         onClose={() => setShowResult(false)}
-        backUrl={`/tests/${test}`}
+        backUrl={`/tests/${book}/${test}`}
         customMessage="File ghi âm câu trả lời Speaking của bạn đã được ghi nhận và lưu trữ trong hệ thống thành công! Bạn có thể nghe lại các bài nói của mình bằng cách chuyển đổi giữa các tab Part 1, 2, 3 và nghe file phát lại."
       />
     </div>

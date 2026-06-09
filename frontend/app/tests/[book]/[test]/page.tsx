@@ -23,17 +23,18 @@ const SKILLS: SkillInfo[] = [
 ]
 
 export default function TestDetailPage() {
-  const params = useParams<{ test: string }>()
+  const params = useParams<{ book: string; test: string }>()
+  const book = params?.book ?? '11'
   const test = params?.test ?? '1'
   const [testData, setTestData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetch(`${BACKEND}/tests/11/${test}`)
+    fetch(`${BACKEND}/tests/${book}/${test}`)
       .then(r => r.json())
       .then(d => { setTestData(d); setLoading(false) })
       .catch(() => setLoading(false))
-  }, [test])
+  }, [book, test])
 
   if (loading) {
     return (
@@ -50,13 +51,13 @@ export default function TestDetailPage() {
       <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 24 }}>
         <Link href="/">Test Library</Link>
         <span style={{ margin: '0 8px' }}>›</span>
-        <span style={{ color: 'var(--text-primary)' }}>Cambridge IELTS 11 — Test {test}</span>
+        <span style={{ color: 'var(--text-primary)' }}>Cambridge IELTS {book} — Test {test}</span>
       </div>
 
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
         <h1 className="page-title">Test {test}</h1>
-        <p className="page-subtitle">Cambridge IELTS 11 Academic</p>
+        <p className="page-subtitle">Cambridge IELTS {book} Academic</p>
       </div>
 
       {/* Skills Grid */}
@@ -100,7 +101,7 @@ export default function TestDetailPage() {
               <span>📝 {skill.questions} câu</span>
             </div>
             {skill.available ? (
-              <Link href={`/tests/${test}/practice/${skill.key}`}>
+              <Link href={`/tests/${book}/${test}/practice/${skill.key}`}>
                 <button className="btn btn-primary" style={{ width: '100%' }}>
                   Bắt đầu luyện tập
                 </button>

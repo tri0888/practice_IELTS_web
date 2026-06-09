@@ -25,6 +25,7 @@ type ContentData = {
 }
 
 interface ReadingPracticeProps {
+  book: string
   test: string
 }
 
@@ -96,7 +97,7 @@ function estimateBand(correct: number, total: number): string {
   return '2.0'
 }
 
-export default function ReadingPractice({ test }: ReadingPracticeProps) {
+export default function ReadingPractice({ book, test }: ReadingPracticeProps) {
   const [content, setContent] = useState<ContentData | null>(null)
   const [loading, setLoading] = useState(true)
   const [activePassage, setActivePassage] = useState(0)
@@ -117,7 +118,7 @@ export default function ReadingPractice({ test }: ReadingPracticeProps) {
     let cancelled = false
     async function load() {
       try {
-        const resp = await fetch(`${BACKEND}/tests/11/${test}/content`)
+        const resp = await fetch(`${BACKEND}/tests/${book}/${test}/content`)
         if (!resp.ok) throw new Error('Failed to load')
         const data = await resp.json()
         if (!cancelled) {
@@ -128,7 +129,7 @@ export default function ReadingPractice({ test }: ReadingPracticeProps) {
         }
         // Load practice layout
         try {
-          const practiceResp = await fetch(`${BACKEND}/tests/11/${test}/practice`)
+          const practiceResp = await fetch(`${BACKEND}/tests/${book}/${test}/practice`)
           if (practiceResp.ok) {
             const practiceData = await practiceResp.json()
             if (!cancelled) setPracticeLayout(practiceData)
@@ -141,7 +142,7 @@ export default function ReadingPractice({ test }: ReadingPracticeProps) {
         const attemptResp = await fetch(`${BACKEND}/attempts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ book: 11, test: Number(test), skill: 'reading' }),
+          body: JSON.stringify({ book: Number(book), test: Number(test), skill: 'reading' }),
         })
         const attemptData = await attemptResp.json()
         if (!cancelled) setAttemptId(attemptData.id)
@@ -153,7 +154,7 @@ export default function ReadingPractice({ test }: ReadingPracticeProps) {
     }
     load()
     return () => { cancelled = true }
-  }, [test])
+  }, [book, test])
 
   // Timer
   useEffect(() => {
@@ -282,7 +283,7 @@ export default function ReadingPractice({ test }: ReadingPracticeProps) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ responses }),
         }),
-        fetch(`${BACKEND}/tests/11/${test}/answers`),
+        fetch(`${BACKEND}/tests/${book}/${test}/answers`),
       ])
       const submitData = await submitResp.json()
       setResult(submitData.result)
@@ -342,7 +343,7 @@ export default function ReadingPractice({ test }: ReadingPracticeProps) {
       <div className="exam-bar">
         <div className="exam-bar__info">
           <span className="exam-bar__badge">Reading</span>
-          <span>Cambridge IELTS 11 — Test {test}</span>
+          <span>Cambridge IELTS {book} — Test {test}</span>
           <span style={{ color: 'rgba(255,255,255,0.5)' }}>
             {answeredCount}/40 đã trả lời
           </span>
@@ -431,7 +432,7 @@ export default function ReadingPractice({ test }: ReadingPracticeProps) {
       {/* Split View */}
       <div className="split-view-3">
         {/* Left: Passage PDF */}
-        <PDFViewer pages={passagePages} containerRef={passagePanelRef} />
+        <PDFViewer book={book} test={parseInt(test, 10)} partKey={`reading_${activePassage + 1}`} pages={passagePages} containerRef={passagePanelRef} />
 
         {/* Divider */}
         <div className="split-view-3__divider" />
@@ -453,7 +454,7 @@ export default function ReadingPractice({ test }: ReadingPracticeProps) {
             </div>
 
             {/* Questions PDF page */}
-            <PDFViewer pages={[activeQuestionPage]} style={{ padding: 0, background: 'transparent', flexGrow: 1 }} />
+            <PDFViewer book={book} test={parseInt(test, 10)} partKey={`reading_q_${activePassage + 1}`} pages={[activeQuestionPage]} style={{ padding: 0, background: 'transparent', flexGrow: 1 }} />
           </div>
         </div>
 
@@ -544,7 +545,7 @@ export default function ReadingPractice({ test }: ReadingPracticeProps) {
         totalCount={result?.total ?? 40}
         bandScore={estimateBand(result?.correct ?? 0, result?.total ?? 40)}
         onClose={() => setShowResult(false)}
-        backUrl={`/tests/${test}`}
+        backUrl={`/tests/${book}/${test}`}
       />
     </div>
   )

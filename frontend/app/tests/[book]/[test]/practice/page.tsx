@@ -3,7 +3,8 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 
 export default function PracticeHubPage() {
-  const params = useParams<{ test: string }>()
+  const params = useParams<{ book: string; test: string }>()
+  const book = params?.book ?? '11'
   const test = params?.test ?? '1'
 
   return (
@@ -12,13 +13,13 @@ export default function PracticeHubPage() {
       <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 24 }}>
         <Link href="/">Test Library</Link>
         <span style={{ margin: '0 8px' }}>›</span>
-        <Link href={`/tests/${test}`}>Test {test}</Link>
+        <Link href={`/tests/${book}/${test}`}>Test {test}</Link>
         <span style={{ margin: '0 8px' }}>›</span>
         <span style={{ color: 'var(--text-primary)' }}>Chọn kỹ năng</span>
       </div>
 
       <h1 className="page-title">Chọn kỹ năng luyện tập</h1>
-      <p className="page-subtitle">Cambridge IELTS 11 — Test {test}</p>
+      <p className="page-subtitle">Cambridge IELTS {book} — Test {test}</p>
 
       <div style={{
         display: 'grid',
@@ -27,7 +28,7 @@ export default function PracticeHubPage() {
         marginTop: 24,
       }}>
         {/* Listening */}
-        <Link href={`/tests/${test}/practice/listening`} style={{ textDecoration: 'none', color: 'inherit' }}>
+        <Link href={`/tests/${book}/${test}/practice/listening`} style={{ textDecoration: 'none', color: 'inherit' }}>
           <div className="card" style={{ cursor: 'pointer', textAlign: 'center', padding: 32 }}>
             <div style={{ fontSize: '3rem', marginBottom: 12 }}>🎧</div>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 8 }}>Listening</h3>
@@ -39,7 +40,7 @@ export default function PracticeHubPage() {
         </Link>
 
         {/* Reading */}
-        <Link href={`/tests/${test}/practice/reading`} style={{ textDecoration: 'none', color: 'inherit' }}>
+        <Link href={`/tests/${book}/${test}/practice/reading`} style={{ textDecoration: 'none', color: 'inherit' }}>
           <div className="card" style={{ cursor: 'pointer', textAlign: 'center', padding: 32 }}>
             <div style={{ fontSize: '3rem', marginBottom: 12 }}>📖</div>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 8 }}>Reading</h3>
@@ -51,7 +52,7 @@ export default function PracticeHubPage() {
         </Link>
 
         {/* Writing */}
-        <Link href={`/tests/${test}/practice/writing`} style={{ textDecoration: 'none', color: 'inherit' }}>
+        <Link href={`/tests/${book}/${test}/practice/writing`} style={{ textDecoration: 'none', color: 'inherit' }}>
           <div className="card" style={{ cursor: 'pointer', textAlign: 'center', padding: 32 }}>
             <div style={{ fontSize: '3rem', marginBottom: 12 }}>✍️</div>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 8 }}>Writing</h3>
@@ -63,7 +64,7 @@ export default function PracticeHubPage() {
         </Link>
 
         {/* Speaking */}
-        <Link href={`/tests/${test}/practice/speaking`} style={{ textDecoration: 'none', color: 'inherit' }}>
+        <Link href={`/tests/${book}/${test}/practice/speaking`} style={{ textDecoration: 'none', color: 'inherit' }}>
           <div className="card" style={{ cursor: 'pointer', textAlign: 'center', padding: 32 }}>
             <div style={{ fontSize: '3rem', marginBottom: 12 }}>🎙️</div>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 8 }}>Speaking</h3>

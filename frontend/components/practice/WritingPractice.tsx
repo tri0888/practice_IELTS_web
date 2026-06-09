@@ -23,10 +23,11 @@ type ContentData = {
 }
 
 interface WritingPracticeProps {
+  book: string
   test: string
 }
 
-export default function WritingPractice({ test }: WritingPracticeProps) {
+export default function WritingPractice({ book, test }: WritingPracticeProps) {
   const [content, setContent] = useState<ContentData | null>(null)
   const [practiceLayout, setPracticeLayout] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -44,7 +45,7 @@ export default function WritingPractice({ test }: WritingPracticeProps) {
     let cancelled = false
     async function load() {
       try {
-        const resp = await fetch(`${BACKEND}/tests/11/${test}/content`)
+        const resp = await fetch(`${BACKEND}/tests/${book}/${test}/content`)
         if (!resp.ok) throw new Error('Failed to load')
         const data = await resp.json()
         if (!cancelled) {
@@ -53,7 +54,7 @@ export default function WritingPractice({ test }: WritingPracticeProps) {
 
         // Load practice layout
         try {
-          const practiceResp = await fetch(`${BACKEND}/tests/11/${test}/practice`)
+          const practiceResp = await fetch(`${BACKEND}/tests/${book}/${test}/practice`)
           if (practiceResp.ok) {
             const practiceData = await practiceResp.json()
             if (!cancelled) setPracticeLayout(practiceData)
@@ -66,7 +67,7 @@ export default function WritingPractice({ test }: WritingPracticeProps) {
         const attemptResp = await fetch(`${BACKEND}/attempts`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ book: 11, test: Number(test), skill: 'writing' }),
+          body: JSON.stringify({ book: Number(book), test: Number(test), skill: 'writing' }),
         })
         const attemptData = await attemptResp.json()
         if (!cancelled) setAttemptId(attemptData.id)
@@ -78,7 +79,7 @@ export default function WritingPractice({ test }: WritingPracticeProps) {
     }
     load()
     return () => { cancelled = true }
-  }, [test])
+  }, [book, test])
 
   // Timer
   useEffect(() => {
@@ -185,7 +186,7 @@ export default function WritingPractice({ test }: WritingPracticeProps) {
       <div className="container">
         <div className="card" style={{ textAlign: 'center', padding: 40 }}>
           <p>❌ Không thể tải nội dung bài thi Writing.</p>
-          <Link href={`/tests/${test}`}>
+          <Link href={`/tests/${book}/${test}`}>
             <button className="btn btn-primary" style={{ marginTop: 16 }}>Quay lại</button>
           </Link>
         </div>
@@ -204,7 +205,7 @@ export default function WritingPractice({ test }: WritingPracticeProps) {
       <div className="exam-bar">
         <div className="exam-bar__info">
           <span className="exam-bar__badge" style={{ backgroundColor: 'var(--accent-orange)' }}>Writing</span>
-          <span>Cambridge IELTS 11 — Test {test}</span>
+          <span>Cambridge IELTS {book} — Test {test}</span>
           <span style={{ color: 'rgba(255,255,255,0.5)' }}>
             Word Count: {getWordCount(essays[1])} (Task 1) | {getWordCount(essays[2])} (Task 2)
           </span>
@@ -242,7 +243,7 @@ export default function WritingPractice({ test }: WritingPracticeProps) {
               </button>
             )}
           </div>
-          <PDFViewer pages={activePages} style={{ flexGrow: 1, padding: 4 }} />
+          <PDFViewer book={book} test={parseInt(test, 10)} partKey={viewMode === 'model' ? undefined : `writing_${activeTaskIndex + 1}`} pages={activePages} style={{ flexGrow: 1, padding: 4 }} />
         </div>
 
         {/* Divider */}
@@ -336,7 +337,7 @@ export default function WritingPractice({ test }: WritingPracticeProps) {
         totalCount={0}
         bandScore="Saved"
         onClose={() => setShowResult(false)}
-        backUrl={`/tests/${test}`}
+        backUrl={`/tests/${book}/${test}`}
         customMessage="Bài viết Writing Task 1 & Task 2 của bạn đã được lưu lại thành công! Bạn có thể xem các bài viết mẫu (Model Answers) của Cambridge để tự so sánh và đánh giá bài làm của mình."
       />
     </div>

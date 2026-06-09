@@ -48,26 +48,78 @@ def get_full_book_pdf_path() -> Path:
         if "__MACOSX" not in candidate.parts:
             candidates.append(candidate)
     if not candidates:
-        raise FileNotFoundError("Full Cambridge IELTS 11 PDF not found")
+        # Fallback to book 12 or others if 11 is missing
+        for candidate in repo_root.rglob("*.pdf"):
+            if "__MACOSX" not in candidate.parts and "Academic" in candidate.name:
+                candidates.append(candidate)
+    if not candidates:
+        raise FileNotFoundError("Full Cambridge IELTS PDF not found")
     return max(candidates, key=lambda path: path.stat().st_size)
 
 
-@lru_cache(maxsize=1)
-def get_pdf_document() -> fitz.Document:
-    return fitz.open(str(get_full_book_pdf_path()))
+def find_book_pdf_path(book: int, pdf_type: str = "academic") -> Path:
+    repo_root = Path(__file__).resolve().parents[2]
+    books_roots = [
+        path
+        for path in repo_root.iterdir()
+        if path.is_dir()
+        and "CAMBRIDGE IELTS" in path.name.upper()
+        and "ACADEMIC" in path.name.upper()
+    ]
+    if not books_roots:
+        return get_full_book_pdf_path()
+
+    book_folder = books_roots[0] / f"Cambridge IELTS {book}"
+    filename = f"Cambridge_IELTS_{book}_Academic.pdf"
+    if pdf_type == "solution":
+        filename = f"Cambridge_IELTS_{book}_Solution.pdf"
+
+    pdf_path = book_folder / filename
+    if pdf_path.exists():
+        return pdf_path
+
+    candidates = [
+        path
+        for path in book_folder.rglob("*.pdf")
+        if "__MACOSX" not in path.parts
+    ]
+    if pdf_type == "solution":
+        solution_candidates = [path for path in candidates if "SOLUTION" in path.name.upper()]
+        if solution_candidates:
+            return max(solution_candidates, key=lambda path: path.stat().st_size)
+
+    academic_candidates = [
+        path
+        for path in candidates
+        if "SOLUTION" not in path.name.upper() and "CHU" not in path.name.upper()
+    ]
+    if academic_candidates:
+        return max(academic_candidates, key=lambda path: path.stat().st_size)
+
+    return get_full_book_pdf_path()
+
+
+def render_pdf_page_typed(book: int, page_number: int, pdf_type: str = "academic") -> Path:
+    cache_dir = Path(__file__).resolve().parents[2] / ".cache" / "pdf-pages"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    output_path = cache_dir / f"cambridge{book}-{pdf_type}-page-{page_number}.png"
+    if output_path.exists():
+        return output_path
+        
+    pdf_path = find_book_pdf_path(book, pdf_type)
+            
+    doc = fitz.open(str(pdf_path))
+    # Safeguard page index
+    page_num_actual = min(max(1, page_number), len(doc))
+    page = doc[page_num_actual - 1]
+    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+    pix.save(str(output_path))
+    doc.close()
+    return output_path
 
 
 def render_pdf_page(page_number: int) -> Path:
-    cache_dir = Path(__file__).resolve().parents[2] / ".cache" / "pdf-pages"
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    output_path = cache_dir / f"cambridge11-page-{page_number}.png"
-    if output_path.exists():
-        return output_path
-    doc = get_pdf_document()
-    page = doc[page_number - 1]
-    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
-    pix.save(str(output_path))
-    return output_path
+    return render_pdf_page_typed(11, page_number, "academic")
 
 
 @app.get("/")
@@ -127,7 +179,7 @@ def login(data: LoginIn):
 def list_tests():
     if db.is_available():
         coll = db.tests_collection()
-        docs = list(coll.find({}, {"test_number": 1, "sections": 1, "_id": 0}))
+        docs = list(coll.find({}, {"book": 1, "test_number": 1, "sections": 1, "_id": 0}))
         return docs
     return seeder.get_tests_list(seed)
 
@@ -136,7 +188,7 @@ def list_tests():
 def get_test(book: int, test: int):
     if db.is_available():
         coll = db.tests_collection()
-        doc = coll.find_one({"test_number": test}, {"_id": 0})
+        doc = coll.find_one({"book": book, "test_number": test}, {"_id": 0})
         if not doc:
             raise HTTPException(status_code=404, detail="test not found in DB")
         return doc
@@ -150,192 +202,39 @@ def get_test(book: int, test: int):
 def get_test_audio(book: int, test: int):
     if db.is_available():
         coll = db.audio_collection()
-        docs = list(coll.find({"test_number": test}, {"_id": 0}))
+        docs = list(coll.find({"book": book, "test_number": test}, {"_id": 0}))
         return docs
-    return seeder.collect_audio_assets(seed, test)
+    return seeder.collect_audio_assets(seed, book, test)
 
 
-PRACTICE_LAYOUTS = {
-    1: {
-        "listening": [
-            {"section": 1, "pages": [11, 12]},
-            {"section": 2, "pages": [13, 14]},
-            {"section": 3, "pages": [15, 16]},
-            {"section": 4, "pages": [17, 18]},
-        ],
-        "reading": [
-            {
-                "passage": 1,
-                "passage_pages": [19, 20],
-                "groups": [
-                    {"range": "1-7", "title": "Questions 1-7", "page": 21},
-                    {"range": "8-13", "title": "Questions 8-13", "page": 21}
-                ]
-            },
-            {
-                "passage": 2,
-                "passage_pages": [22, 23],
-                "groups": [
-                    {"range": "14-19", "title": "Questions 14-19", "page": 24},
-                    {"range": "20-26", "title": "Questions 20-26", "page": 25}
-                ]
-            },
-            {
-                "passage": 3,
-                "passage_pages": [26, 27],
-                "groups": [
-                    {"range": "27-29", "title": "Questions 27-29", "page": 28},
-                    {"range": "30-36", "title": "Questions 30-36", "page": 29},
-                    {"range": "37-40", "title": "Questions 37-40", "page": 30}
-                ]
-            },
-        ],
-        "writing": [
-            {"task": 1, "pages": [31], "model_answer_pages": [133]},
-            {"task": 2, "pages": [32], "model_answer_pages": [134]}
-        ],
-        "speaking": [
-            {"part": 1, "pages": [33]}
-        ]
-    },
-    2: {
-        "listening": [
-            {"section": 1, "pages": [34, 35]},
-            {"section": 2, "pages": [36, 37]},
-            {"section": 3, "pages": [38, 39]},
-            {"section": 4, "pages": [40, 41]},
-        ],
-        "reading": [
-            {
-                "passage": 1,
-                "passage_pages": [42, 43],
-                "groups": [
-                    {"range": "1-4", "title": "Questions 1-4", "page": 44},
-                    {"range": "5-8", "title": "Questions 5-8", "page": 44},
-                    {"range": "9-13", "title": "Questions 9-13", "page": 45}
-                ]
-            },
-            {
-                "passage": 2,
-                "passage_pages": [47, 48],
-                "groups": [
-                    {"range": "14-20", "title": "Questions 14-20", "page": 46},
-                    {"range": "21-24", "title": "Questions 21-24", "page": 49},
-                    {"range": "25-26", "title": "Questions 25-26", "page": 49}
-                ]
-            },
-            {
-                "passage": 3,
-                "passage_pages": [50, 51],
-                "groups": [
-                    {"range": "27-30", "title": "Questions 27-30", "page": 52},
-                    {"range": "31-33", "title": "Questions 31-33", "page": 53},
-                    {"range": "34-40", "title": "Questions 34-40", "page": 54}
-                ]
-            },
-        ],
-        "writing": [
-            {"task": 1, "pages": [55], "model_answer_pages": [135]},
-            {"task": 2, "pages": [56], "model_answer_pages": [136]}
-        ],
-        "speaking": [
-            {"part": 1, "pages": [57]}
-        ]
-    },
-    3: {
-        "listening": [
-            {"section": 1, "pages": [58, 59]},
-            {"section": 2, "pages": [60, 61]},
-            {"section": 3, "pages": [62, 63]},
-            {"section": 4, "pages": [64, 65]},
-        ],
-        "reading": [
-            {
-                "passage": 1,
-                "passage_pages": [66, 67],
-                "groups": [
-                    {"range": "1-9", "title": "Questions 1-9", "page": 68},
-                    {"range": "10-13", "title": "Questions 10-13", "page": 69}
-                ]
-            },
-            {
-                "passage": 2,
-                "passage_pages": [70, 71],
-                "groups": [
-                    {"range": "14-18", "title": "Questions 14-18", "page": 72},
-                    {"range": "19-22", "title": "Questions 19-22", "page": 73},
-                    {"range": "23-26", "title": "Questions 23-26", "page": 73}
-                ]
-            },
-            {
-                "passage": 3,
-                "passage_pages": [74, 75],
-                "groups": [
-                    {"range": "27-34", "title": "Questions 27-34", "page": 76},
-                    {"range": "35-40", "title": "Questions 35-40", "page": 77}
-                ]
-            },
-        ],
-        "writing": [
-            {"task": 1, "pages": [78], "model_answer_pages": [137]},
-            {"task": 2, "pages": [79], "model_answer_pages": [138]}
-        ],
-        "speaking": [
-            {"part": 1, "pages": [80]}
-        ]
-    },
-    4: {
-        "listening": [
-            {"section": 1, "pages": [81, 82]},
-            {"section": 2, "pages": [83, 84]},
-            {"section": 3, "pages": [85, 86]},
-            {"section": 4, "pages": [87]},
-        ],
-        "reading": [
-            {
-                "passage": 1,
-                "passage_pages": [88, 89],
-                "groups": [
-                    {"range": "1-4", "title": "Questions 1-4", "page": 90},
-                    {"range": "5-9", "title": "Questions 5-9", "page": 90},
-                    {"range": "10-13", "title": "Questions 10-13", "page": 91}
-                ]
-            },
-            {
-                "passage": 2,
-                "passage_pages": [92, 93],
-                "groups": [
-                    {"range": "14-18", "title": "Questions 14-18", "page": 94},
-                    {"range": "19-23", "title": "Questions 19-23", "page": 95},
-                    {"range": "24-26", "title": "Questions 24-26", "page": 96}
-                ]
-            },
-            {
-                "passage": 3,
-                "passage_pages": [98, 99],
-                "groups": [
-                    {"range": "27-32", "title": "Questions 27-32", "page": 97},
-                    {"range": "33-36", "title": "Questions 33-36", "page": 100},
-                    {"range": "37-40", "title": "Questions 37-40", "page": 100}
-                ]
-            },
-        ],
-        "writing": [
-            {"task": 1, "pages": [101], "model_answer_pages": [139]},
-            {"task": 2, "pages": [102], "model_answer_pages": [140]}
-        ],
-        "speaking": [
-            {"part": 1, "pages": [103]}
-        ]
-    }
-}
+@lru_cache(maxsize=1)
+def load_all_layouts() -> dict:
+    repo_root = Path(__file__).resolve().parents[2]
+    layout_path = repo_root / "phase0" / "output" / "cambridge_all_layouts.json"
+    if layout_path.exists():
+        import json
+        try:
+            return json.loads(layout_path.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"Error loading layout JSON: {e}")
+    return {}
 
 
 @app.get("/api/tests/{book}/{test}/practice")
 def get_practice_layout(book: int, test: int):
-    if book != 11 or test not in PRACTICE_LAYOUTS:
-        raise HTTPException(status_code=404, detail="practice layout only prepared for Cambridge 11")
-    return PRACTICE_LAYOUTS[test]
+    layouts = load_all_layouts()
+    book_str = str(book)
+    test_str = str(test)
+    if book_str not in layouts or test_str not in layouts[book_str]:
+        # Fallback layout calculation if layout mapping is not found
+        try:
+            from phase0.generate_perfect_layouts import BOOK_LAYOUTS
+            if book in BOOK_LAYOUTS and test in BOOK_LAYOUTS[book]:
+                return BOOK_LAYOUTS[book][test]
+        except Exception as e:
+            print(f"Fallback layout error: {e}")
+        raise HTTPException(status_code=404, detail=f"Practice layout not mapped for Book {book} Test {test}")
+    return layouts[book_str][test_str]
 
 
 @app.get("/api/tests/{book}/{test}/content")
@@ -403,16 +302,17 @@ def submit_attempt(attempt_id: str, body: AttemptSubmit):
         is_listening = attempt.get("skill", "").lower() == "listening"
         if is_reading or is_listening:
             if is_reading:
-                correct = seeder.collect_reading_answers(seed, attempt["test"])
+                correct = seeder.collect_reading_answers(seed, attempt.get("book", 11), attempt["test"])
             else:
-                correct = seeder.collect_listening_answers(seed, attempt["test"])
+                correct = seeder.collect_listening_answers(seed, attempt.get("book", 11), attempt["test"])
             total = 0
             right = 0
             for r in body.responses:
                 q = int(r.get("question_number"))
                 ans = str(r.get("answer", "")).strip()
                 total += 1
-                if str(correct.get(q, "")).strip().lower() == ans.lower():
+                correct_ans = str(correct.get(q, "")).strip()
+                if correct_ans and correct_ans.lower() == ans.lower():
                     right += 1
             result = {"total": total, "correct": right}
         else:
@@ -428,16 +328,17 @@ def submit_attempt(attempt_id: str, body: AttemptSubmit):
         is_listening = attempt.get("skill", "").lower() == "listening"
         if is_reading or is_listening:
             if is_reading:
-                correct = seeder.collect_reading_answers(seed, attempt["test"])
+                correct = seeder.collect_reading_answers(seed, attempt.get("book", 11), attempt["test"])
             else:
-                correct = seeder.collect_listening_answers(seed, attempt["test"])
+                correct = seeder.collect_listening_answers(seed, attempt.get("book", 11), attempt["test"])
             total = 0
             right = 0
             for r in body.responses:
                 q = int(r.get("question_number"))
                 ans = str(r.get("answer", "")).strip()
                 total += 1
-                if str(correct.get(q, "")).strip().lower() == ans.lower():
+                correct_ans = str(correct.get(q, "")).strip()
+                if correct_ans and correct_ans.lower() == ans.lower():
                     right += 1
             attempt["result"] = {"total": total, "correct": right}
         else:
@@ -464,15 +365,19 @@ def import_tests():
     if not db.is_available():
         raise HTTPException(status_code=503, detail="DB not available; cannot import tests")
     coll = db.tests_collection()
+    coll.delete_many({})
     seed_data = seed
     inserted = 0
     for t in seed_data.get("tests", []):
-        coll.update_one({"test_number": t["test_number"]}, {"$set": t}, upsert=True)
+        book_id = t.get("book", 11)
+        coll.update_one({"book": book_id, "test_number": t["test_number"]}, {"$set": t}, upsert=True)
         inserted += 1
     # audio assets
     audio_coll = db.audio_collection()
+    audio_coll.delete_many({})
     for a in seed_data.get("audio_assets", []):
-        audio_coll.update_one({"file_name": a["file_name"]}, {"$set": a}, upsert=True)
+        book_id = a.get("book", 11)
+        audio_coll.update_one({"book": book_id, "test_number": a["test_number"], "file_name": a["file_name"]}, {"$set": a}, upsert=True)
     return {"inserted_tests": inserted}
 
 
@@ -496,5 +401,139 @@ def stream_audio(file_name: str):
 def get_pdf_page_image(page_number: int):
     pdf_path = render_pdf_page(page_number)
     return FileResponse(path=pdf_path, media_type="image/png")
+
+
+@app.get("/api/pdf-pages/{book}/{pdf_type}/{page_number}.png")
+def get_pdf_page_image_typed(book: int, pdf_type: str, page_number: int):
+    pdf_path = render_pdf_page_typed(book, page_number, pdf_type)
+    return FileResponse(path=pdf_path, media_type="image/png")
+
+
+@lru_cache(maxsize=4)
+def load_boundaries(version: int) -> dict:
+    repo_root = Path(__file__).resolve().parents[2]
+    boundaries_path = repo_root / "phase0" / "output" / "cambridge_boundaries.json"
+    if boundaries_path.exists():
+        import json
+        try:
+            return json.loads(boundaries_path.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"Error loading boundaries JSON: {e}")
+    return {}
+
+
+def boundaries_cache_version() -> int:
+    repo_root = Path(__file__).resolve().parents[2]
+    boundaries_path = repo_root / "phase0" / "output" / "cambridge_boundaries.json"
+    if boundaries_path.exists():
+        return boundaries_path.stat().st_mtime_ns
+    return 0
+
+
+def render_pdf_part_typed(book: int, pdf_type: str, test: int, part_key: str) -> Path:
+    cache_dir = Path(__file__).resolve().parents[2] / ".cache" / "pdf-parts"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_version = boundaries_cache_version()
+    output_path = cache_dir / f"cambridge{book}-{pdf_type}-test{test}-{part_key}-{cache_version}.png"
+    if output_path.exists():
+        return output_path
+        
+    boundaries = load_boundaries(cache_version)
+    book_str = str(book)
+    test_str = str(test)
+    
+    segments = None
+    if book_str in boundaries and test_str in boundaries[book_str]:
+        segments = boundaries[book_str][test_str].get(part_key)
+        
+    pdf_path = find_book_pdf_path(book, pdf_type)
+            
+    doc = fitz.open(str(pdf_path))
+    
+    if not segments:
+        layouts = load_all_layouts()
+        pages = []
+        if book_str in layouts and test_str in layouts[book_str]:
+            layout = layouts[book_str][test_str]
+            if part_key.startswith("listening_"):
+                sec_num = int(part_key.split("_")[1])
+                item = next((x for x in layout.get("listening", []) if x["section"] == sec_num), None)
+                if item: pages = item["pages"]
+            elif part_key.startswith("reading_q_"):
+                pas_num = int(part_key.split("_")[2])
+                item = next((x for x in layout.get("reading", []) if x["passage"] == pas_num), None)
+                if item and item.get("groups"):
+                     pages = list(set([g["page"] for g in item["groups"]]))
+                     pages.sort()
+            elif part_key.startswith("reading_"):
+                pas_num = int(part_key.split("_")[1])
+                item = next((x for x in layout.get("reading", []) if x["passage"] == pas_num), None)
+                if item: pages = item["passage_pages"]
+            elif part_key.startswith("writing_"):
+                task_num = int(part_key.split("_")[1])
+                item = next((x for x in layout.get("writing", []) if x["task"] == task_num), None)
+                if item: pages = item["pages"]
+            elif part_key == "speaking":
+                item = layout.get("speaking", [None])[0]
+                if item: pages = item["pages"]
+                
+        if not pages:
+            doc.close()
+            raise HTTPException(status_code=404, detail=f"Part {part_key} not found for Book {book} Test {test}")
+            
+        segments = []
+        for p in pages:
+            page_num_actual = min(max(1, p), len(doc))
+            page_h = doc[page_num_actual - 1].rect.height
+            segments.append({"page": page_num_actual, "y_start": 0.0, "y_end": page_h})
+            
+    first_page_num = min(max(1, segments[0]["page"]), len(doc))
+    width = doc[first_page_num - 1].rect.width
+    
+    total_height = 0.0
+    valid_segments = []
+    for seg in segments:
+        p_num = min(max(1, seg["page"]), len(doc))
+        page_h = doc[p_num - 1].rect.height
+        y_s = max(0.0, float(seg.get("y_start", 0.0)))
+        y_e = float(seg.get("y_end", page_h))
+        # If the provided y_end is larger than the page, bound it
+        y_e = min(page_h, y_e)
+        
+        h = y_e - y_s
+        if h > 0:
+            total_height += h
+            valid_segments.append((p_num, y_s, y_e, h))
+            
+    if not valid_segments or total_height <= 0:
+        doc.close()
+        raise HTTPException(status_code=400, detail="Invalid segments for stitching")
+        
+    out_doc = fitz.open()
+    new_page = out_doc.new_page(width=width, height=total_height)
+    
+    curr_y = 0.0
+    for p_num, y_s, y_e, h in valid_segments:
+        dest_rect = fitz.Rect(0.0, curr_y, width, curr_y + h)
+        clip_rect = fitz.Rect(0.0, y_s, width, y_e)
+        new_page.show_pdf_page(dest_rect, doc, p_num - 1, clip=clip_rect)
+        curr_y += h
+        
+    pix = new_page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+    pix.save(str(output_path))
+    
+    doc.close()
+    out_doc.close()
+    return output_path
+
+
+@app.get("/api/pdf-parts/{book}/{pdf_type}/{test}/{part_key}.png")
+def get_pdf_part_image(book: int, pdf_type: str, test: int, part_key: str):
+    try:
+        pdf_path = render_pdf_part_typed(book, pdf_type, test, part_key)
+        return FileResponse(path=pdf_path, media_type="image/png")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 
