@@ -924,3 +924,13 @@ h1, h2, h3, h4, h5 {
   }
 }
 
+/* -------- Admin Dashboard -------- */
+.admin-test-tile {
+  transition: all var(--transition-fast) ease-in-out !important;
+}
+.admin-test-tile:hover {
+  background: var(--bg-secondary) !important;
+  border-color: var(--ielts-red) !important;
+  box-shadow: var(--shadow-md) !important;
+  transform: translateY(-2px);
+}

@@ -11,8 +11,8 @@ def load_seed() -> dict:
         "audio_assets": []
     }
     
-    # Load all seeds from 11 to 20
-    for book in range(11, 21):
+    # Load all seeds from 11 to 19
+    for book in range(11, 20):
         p = output_dir / f"cambridge_{book}_seed.json"
         if p.exists():
             try:

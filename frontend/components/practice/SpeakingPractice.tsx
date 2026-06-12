@@ -55,11 +55,17 @@ export default function SpeakingPractice({ book, test }: SpeakingPracticeProps) 
     let cancelled = false
     async function load() {
       try {
-        const resp = await fetch(`${BACKEND}/tests/${book}/${test}/content`)
-        if (!resp.ok) throw new Error('Failed to load')
-        const data = await resp.json()
+        const defaultContent: ContentData = {
+          speaking: {
+            parts: [
+              { part_number: 1, pages: [], content_text: '' },
+              { part_number: 2, pages: [], content_text: '' },
+              { part_number: 3, pages: [], content_text: '' }
+            ]
+          }
+        }
         if (!cancelled) {
-          setContent(data)
+          setContent(defaultContent)
         }
 
         // Create attempt

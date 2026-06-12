@@ -43,59 +43,34 @@ def load_test_content(book: int, test: int) -> dict | None:
 @lru_cache(maxsize=1)
 def get_full_book_pdf_path() -> Path:
     repo_root = Path(__file__).resolve().parents[2]
-    candidates: list[Path] = []
-    for candidate in repo_root.rglob("Cambridge-IELTS-11-Academic.pdf"):
-        if "__MACOSX" not in candidate.parts:
-            candidates.append(candidate)
-    if not candidates:
-        # Fallback to book 12 or others if 11 is missing
-        for candidate in repo_root.rglob("*.pdf"):
-            if "__MACOSX" not in candidate.parts and "Academic" in candidate.name:
-                candidates.append(candidate)
-    if not candidates:
-        raise FileNotFoundError("Full Cambridge IELTS PDF not found")
-    return max(candidates, key=lambda path: path.stat().st_size)
+    # Try to find Cambridge 11 PDF first as a standard fallback
+    for p in repo_root.rglob("*.pdf"):
+        if "__MACOSX" not in p.parts and "Cambridge 11" in p.name:
+            return p
+    # If not found, return any Cambridge PDF
+    for p in repo_root.rglob("*.pdf"):
+        if "__MACOSX" not in p.parts and "Cambridge" in p.name:
+            return p
+    raise FileNotFoundError("Full Cambridge IELTS PDF not found")
 
 
 def find_book_pdf_path(book: int, pdf_type: str = "academic") -> Path:
     repo_root = Path(__file__).resolve().parents[2]
-    books_roots = [
-        path
-        for path in repo_root.iterdir()
-        if path.is_dir()
-        and "CAMBRIDGE IELTS" in path.name.upper()
-        and "ACADEMIC" in path.name.upper()
-    ]
-    if not books_roots:
-        return get_full_book_pdf_path()
-
-    book_folder = books_roots[0] / f"Cambridge IELTS {book}"
-    filename = f"Cambridge_IELTS_{book}_Academic.pdf"
-    if pdf_type == "solution":
-        filename = f"Cambridge_IELTS_{book}_Solution.pdf"
-
-    pdf_path = book_folder / filename
+    cambridge_dir = repo_root / "Books" / "Cambridge IELTS 11-20"
+    
+    # 1. Direct path lookup under the expected structure
+    pdf_path = cambridge_dir / f"Cam {book}" / f"Cambridge {book}.pdf"
     if pdf_path.exists():
         return pdf_path
-
-    candidates = [
-        path
-        for path in book_folder.rglob("*.pdf")
-        if "__MACOSX" not in path.parts
-    ]
-    if pdf_type == "solution":
-        solution_candidates = [path for path in candidates if "SOLUTION" in path.name.upper()]
-        if solution_candidates:
-            return max(solution_candidates, key=lambda path: path.stat().st_size)
-
-    academic_candidates = [
-        path
-        for path in candidates
-        if "SOLUTION" not in path.name.upper() and "CHU" not in path.name.upper()
-    ]
-    if academic_candidates:
-        return max(academic_candidates, key=lambda path: path.stat().st_size)
-
+        
+    # 2. Case-insensitive rglob search fallback
+    for p in repo_root.rglob("*.pdf"):
+        if "__MACOSX" not in p.parts:
+            # Check if directory name matches "Cam {book}" or filename matches "Cambridge {book}"
+            if f"Cam {book}" in p.parts or f"Cambridge {book}" in p.name or f"Cambridge-{book}" in p.name or f"Cambridge_{book}" in p.name:
+                return p
+                
+    # 3. Ultimate fallback
     return get_full_book_pdf_path()
 
 
@@ -152,6 +127,19 @@ class AttemptCreate(BaseModel):
 class AttemptSubmit(BaseModel):
     responses: List[dict]
 
+class AdminLayoutIn(BaseModel):
+    layout: dict
+
+class AdminAnswersIn(BaseModel):
+    answers: dict
+
+class ExtractAnswersIn(BaseModel):
+    page_number: int
+    skill: str  # "listening" or "reading"
+
+class AdminAudioIn(BaseModel):
+    audio_assets: list
+
 
 @app.post("/api/auth/register")
 def register(data: RegisterIn):
@@ -184,6 +172,18 @@ def list_tests():
     return seeder.get_tests_list(seed)
 
 
+@app.get("/api/tests/{book}/page-count")
+def get_pdf_page_count(book: int, pdf_type: str = "academic"):
+    try:
+        pdf_path = find_book_pdf_path(book, pdf_type)
+        doc = fitz.open(str(pdf_path))
+        page_count = len(doc)
+        doc.close()
+        return {"book": book, "pdf_type": pdf_type, "page_count": page_count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/api/tests/{book}/{test}")
 def get_test(book: int, test: int):
     if db.is_available():
@@ -210,7 +210,7 @@ def get_test_audio(book: int, test: int):
 @lru_cache(maxsize=1)
 def load_all_layouts() -> dict:
     repo_root = Path(__file__).resolve().parents[2]
-    layout_path = repo_root / "phase0" / "output" / "cambridge_all_layouts.json"
+    layout_path = repo_root / "backend" / "config" / "cambridge_all_layouts.json"
     if layout_path.exists():
         import json
         try:
@@ -220,8 +220,27 @@ def load_all_layouts() -> dict:
     return {}
 
 
+def get_practice_layout_dict(book: int, test: int):
+    if db.is_available():
+        coll = db.layouts_collection()
+        if coll is not None:
+            doc = coll.find_one({"book": book, "test": test}, {"_id": 0})
+            if doc and "layout" in doc:
+                return doc["layout"]
+    
+    layouts = load_all_layouts()
+    book_str = str(book)
+    test_str = str(test)
+    if book_str in layouts and test_str in layouts[book_str]:
+        return layouts[book_str][test_str]
+    return None
+
 @app.get("/api/tests/{book}/{test}/practice")
 def get_practice_layout(book: int, test: int):
+    layout = get_practice_layout_dict(book, test)
+    if layout:
+        return layout
+    
     layouts = load_all_layouts()
     book_str = str(book)
     test_str = str(test)
@@ -246,9 +265,33 @@ def get_test_content(book: int, test: int):
     return content
 
 
+def get_test_answers_dict(book: int, test: int) -> dict:
+    if db.is_available():
+        coll = db.answers_collection()
+        if coll is not None:
+            doc = coll.find_one({"book": book, "test": test}, {"_id": 0})
+            if doc and "answers" in doc:
+                return doc["answers"]
+                
+    t = seeder.find_test(seed, book, test)
+    if not t:
+        return {}
+    answers = {}
+    for section in t.get("sections", []):
+        for row in section.get("rows", []):
+            answers[str(row["question_number"])] = {
+                "answer": row.get("answer_text", ""),
+                "explanation": row.get("explanation_text", ""),
+            }
+    return answers
+
 @app.get("/api/tests/{book}/{test}/answers")
 def get_test_answers(book: int, test: int):
     """Return answer key from the seed data."""
+    answers = get_test_answers_dict(book, test)
+    if answers:
+        return {"book": book, "test": test, "answers": answers}
+        
     t = seeder.find_test(seed, book, test)
     if not t:
         raise HTTPException(status_code=404, detail="test not found")
@@ -301,7 +344,10 @@ def submit_attempt(attempt_id: str, body: AttemptSubmit):
         is_reading = attempt.get("skill", "").lower().startswith("passage") or attempt.get("skill", "").lower() == "reading"
         is_listening = attempt.get("skill", "").lower() == "listening"
         if is_reading or is_listening:
-            if is_reading:
+            db_answers = get_test_answers_dict(attempt.get("book", 11), attempt["test"])
+            if db_answers:
+                correct = {int(k): v.get("answer", "") for k, v in db_answers.items()}
+            elif is_reading:
                 correct = seeder.collect_reading_answers(seed, attempt.get("book", 11), attempt["test"])
             else:
                 correct = seeder.collect_listening_answers(seed, attempt.get("book", 11), attempt["test"])
@@ -327,7 +373,10 @@ def submit_attempt(attempt_id: str, body: AttemptSubmit):
         is_reading = attempt.get("skill", "").lower().startswith("passage") or attempt.get("skill", "").lower() == "reading"
         is_listening = attempt.get("skill", "").lower() == "listening"
         if is_reading or is_listening:
-            if is_reading:
+            db_answers = get_test_answers_dict(attempt.get("book", 11), attempt["test"])
+            if db_answers:
+                correct = {int(k): v.get("answer", "") for k, v in db_answers.items()}
+            elif is_reading:
                 correct = seeder.collect_reading_answers(seed, attempt.get("book", 11), attempt["test"])
             else:
                 correct = seeder.collect_listening_answers(seed, attempt.get("book", 11), attempt["test"])
@@ -364,6 +413,8 @@ def get_result(attempt_id: str):
 def import_tests():
     if not db.is_available():
         raise HTTPException(status_code=503, detail="DB not available; cannot import tests")
+        
+    # 1. Tests
     coll = db.tests_collection()
     coll.delete_many({})
     seed_data = seed
@@ -372,12 +423,42 @@ def import_tests():
         book_id = t.get("book", 11)
         coll.update_one({"book": book_id, "test_number": t["test_number"]}, {"$set": t}, upsert=True)
         inserted += 1
-    # audio assets
+        
+    # 2. Audio Assets
     audio_coll = db.audio_collection()
-    audio_coll.delete_many({})
-    for a in seed_data.get("audio_assets", []):
-        book_id = a.get("book", 11)
-        audio_coll.update_one({"book": book_id, "test_number": a["test_number"], "file_name": a["file_name"]}, {"$set": a}, upsert=True)
+    if audio_coll is not None:
+        audio_coll.delete_many({})
+        for a in seed_data.get("audio_assets", []):
+            book_id = a.get("book", 11)
+            audio_coll.update_one({"book": book_id, "test_number": a["test_number"], "file_name": a["file_name"]}, {"$set": a}, upsert=True)
+            
+    # 3. Layouts
+    layout_coll = db.layouts_collection()
+    if layout_coll is not None:
+        layout_coll.delete_many({})
+        layouts = load_all_layouts()
+        for b_str, tests in layouts.items():
+            b = int(b_str)
+            for t_str, l_data in tests.items():
+                t_num = int(t_str)
+                layout_coll.update_one({"book": b, "test": t_num}, {"$set": {"layout": l_data}}, upsert=True)
+                
+    # 4. Answers
+    ans_coll = db.answers_collection()
+    if ans_coll is not None:
+        ans_coll.delete_many({})
+        for t in seed_data.get("tests", []):
+            book_id = t.get("book", 11)
+            test_number = t["test_number"]
+            answers = {}
+            for section in t.get("sections", []):
+                for row in section.get("rows", []):
+                    answers[str(row["question_number"])] = {
+                        "answer": row.get("answer_text", ""),
+                        "explanation": row.get("explanation_text", "")
+                    }
+            ans_coll.update_one({"book": book_id, "test": test_number}, {"$set": {"answers": answers}}, upsert=True)
+            
     return {"inserted_tests": inserted}
 
 
@@ -397,6 +478,36 @@ def stream_audio(file_name: str):
     return FileResponse(path=audio_path, media_type="audio/mpeg", filename=file_name)
 
 
+@app.get("/api/admin/books/{book}/audio-files")
+def list_book_audio_files(book: int):
+    repo_root = Path(__file__).resolve().parents[2]
+    book_audio_dir = repo_root / "Books" / "Cambridge IELTS 11-20" / f"Cam {book}" / "Audio"
+    
+    files = []
+    if book_audio_dir.exists():
+        for p in book_audio_dir.glob("**/*.mp3"):
+            if "__MACOSX" not in p.parts:
+                rel_path = p.relative_to(repo_root).as_posix()
+                files.append({
+                    "file_name": p.name,
+                    "relative_path": rel_path
+                })
+    # Fallback to scanning everything under Books/Cambridge IELTS 11-20/Cam {book}
+    if not files:
+        book_dir = repo_root / "Books" / "Cambridge IELTS 11-20" / f"Cam {book}"
+        if book_dir.exists():
+            for p in book_dir.glob("**/*.mp3"):
+                if "__MACOSX" not in p.parts:
+                    rel_path = p.relative_to(repo_root).as_posix()
+                    files.append({
+                        "file_name": p.name,
+                        "relative_path": rel_path
+                    })
+    # Sort files by name
+    files.sort(key=lambda x: x["file_name"])
+    return files
+
+
 @app.get("/api/pdf-pages/{page_number}.png")
 def get_pdf_page_image(page_number: int):
     pdf_path = render_pdf_page(page_number)
@@ -407,6 +518,9 @@ def get_pdf_page_image(page_number: int):
 def get_pdf_page_image_typed(book: int, pdf_type: str, page_number: int):
     pdf_path = render_pdf_page_typed(book, page_number, pdf_type)
     return FileResponse(path=pdf_path, media_type="image/png")
+
+
+
 
 
 @lru_cache(maxsize=4)
@@ -442,50 +556,52 @@ def render_pdf_part_typed(book: int, pdf_type: str, test: int, part_key: str) ->
     book_str = str(book)
     test_str = str(test)
     
-    segments = None
-    if book_str in boundaries and test_str in boundaries[book_str]:
-        segments = boundaries[book_str][test_str].get(part_key)
-        
+    pages = []
+    layout = get_practice_layout_dict(book, test)
+    if layout:
+        if part_key.startswith("listening_"):
+            sec_num = int(part_key.split("_")[1])
+            item = next((x for x in layout.get("listening", []) if x["section"] == sec_num), None)
+            if item: pages = item["pages"]
+        elif part_key.startswith("reading_q_"):
+            pas_num = int(part_key.split("_")[2])
+            item = next((x for x in layout.get("reading", []) if x["passage"] == pas_num), None)
+            if item and item.get("groups"):
+                 pages = list(set([g["page"] for g in item["groups"]]))
+                 pages.sort()
+        elif part_key.startswith("reading_"):
+            pas_num = int(part_key.split("_")[1])
+            item = next((x for x in layout.get("reading", []) if x["passage"] == pas_num), None)
+            if item: pages = item["passage_pages"]
+        elif part_key.startswith("writing_"):
+            task_num = int(part_key.split("_")[1])
+            item = next((x for x in layout.get("writing", []) if x["task"] == task_num), None)
+            if item: pages = item["pages"]
+        elif part_key == "speaking":
+            item = layout.get("speaking", [None])[0]
+            if item: pages = item["pages"]
+
     pdf_path = find_book_pdf_path(book, pdf_type)
-            
     doc = fitz.open(str(pdf_path))
     
-    if not segments:
-        layouts = load_all_layouts()
-        pages = []
-        if book_str in layouts and test_str in layouts[book_str]:
-            layout = layouts[book_str][test_str]
-            if part_key.startswith("listening_"):
-                sec_num = int(part_key.split("_")[1])
-                item = next((x for x in layout.get("listening", []) if x["section"] == sec_num), None)
-                if item: pages = item["pages"]
-            elif part_key.startswith("reading_q_"):
-                pas_num = int(part_key.split("_")[2])
-                item = next((x for x in layout.get("reading", []) if x["passage"] == pas_num), None)
-                if item and item.get("groups"):
-                     pages = list(set([g["page"] for g in item["groups"]]))
-                     pages.sort()
-            elif part_key.startswith("reading_"):
-                pas_num = int(part_key.split("_")[1])
-                item = next((x for x in layout.get("reading", []) if x["passage"] == pas_num), None)
-                if item: pages = item["passage_pages"]
-            elif part_key.startswith("writing_"):
-                task_num = int(part_key.split("_")[1])
-                item = next((x for x in layout.get("writing", []) if x["task"] == task_num), None)
-                if item: pages = item["pages"]
-            elif part_key == "speaking":
-                item = layout.get("speaking", [None])[0]
-                if item: pages = item["pages"]
-                
-        if not pages:
-            doc.close()
-            raise HTTPException(status_code=404, detail=f"Part {part_key} not found for Book {book} Test {test}")
-            
+    segments = None
+    if pages:
         segments = []
         for p in pages:
             page_num_actual = min(max(1, p), len(doc))
             page_h = doc[page_num_actual - 1].rect.height
             segments.append({"page": page_num_actual, "y_start": 0.0, "y_end": page_h})
+    else:
+        # Fallback to static boundaries
+        boundaries = load_boundaries(cache_version)
+        book_str = str(book)
+        test_str = str(test)
+        if book_str in boundaries and test_str in boundaries[book_str]:
+            segments = boundaries[book_str][test_str].get(part_key)
+
+    if not segments:
+        doc.close()
+        raise HTTPException(status_code=404, detail=f"Part {part_key} not found for Book {book} Test {test}")
             
     first_page_num = min(max(1, segments[0]["page"]), len(doc))
     width = doc[first_page_num - 1].rect.width
@@ -537,3 +653,88 @@ def get_pdf_part_image(book: int, pdf_type: str, test: int, part_key: str):
 
 
 
+
+@app.get("/api/admin/tests/{book}/{test}")
+def admin_get_test_info(book: int, test: int):
+    layout = get_practice_layout_dict(book, test)
+    answers = get_test_answers_dict(book, test)
+    audio = []
+    if db.is_available():
+        coll = db.audio_collection()
+        if coll is not None:
+            audio = list(coll.find({"book": book, "test_number": test}, {"_id": 0}))
+    if not audio:
+        audio = seeder.collect_audio_assets(seed, book, test)
+    return {
+        "book": book,
+        "test": test,
+        "layout": layout,
+        "answers": answers,
+        "audio_assets": audio
+    }
+
+@app.put("/api/admin/tests/{book}/{test}/layout")
+def admin_update_layout(book: int, test: int, data: AdminLayoutIn):
+    if not db.is_available():
+        raise HTTPException(status_code=503, detail="DB not available")
+    coll = db.layouts_collection()
+    coll.update_one({"book": book, "test": test}, {"$set": {"layout": data.layout}}, upsert=True)
+    
+    # Clear stitched parts cache for this book and test to force regeneration
+    cache_dir = Path(__file__).resolve().parents[2] / ".cache" / "pdf-parts"
+    if cache_dir.exists():
+        for p in cache_dir.glob(f"cambridge{book}-*-test{test}-*.png"):
+            try:
+                p.unlink()
+            except Exception as e:
+                print(f"Error clearing cache file {p}: {e}")
+                
+    return {"status": "ok"}
+
+@app.put("/api/admin/tests/{book}/{test}/answers")
+def admin_update_answers(book: int, test: int, data: AdminAnswersIn):
+    if not db.is_available():
+        raise HTTPException(status_code=503, detail="DB not available")
+    coll = db.answers_collection()
+    coll.update_one({"book": book, "test": test}, {"$set": {"answers": data.answers}}, upsert=True)
+    return {"status": "ok"}
+
+@app.put("/api/admin/tests/{book}/{test}/audio")
+def admin_update_audio(book: int, test: int, data: AdminAudioIn):
+    if not db.is_available():
+        raise HTTPException(status_code=503, detail="DB not available")
+    coll = db.audio_collection()
+    coll.delete_many({"book": book, "test_number": test})
+    for a in data.audio_assets:
+        a["book"] = book
+        a["test_number"] = test
+        coll.insert_one(a)
+    return {"status": "ok"}
+
+import re
+@app.post("/api/admin/tests/{book}/{test}/extract-answers")
+def extract_answers(book: int, test: int, data: ExtractAnswersIn):
+    pdf_path = find_book_pdf_path(book, "solution")
+    try:
+        doc = fitz.open(str(pdf_path))
+        page_num_actual = min(max(1, data.page_number), len(doc))
+        page = doc[page_num_actual - 1]
+        text = page.get_text("text")
+        doc.close()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+        
+    extracted = {}
+    lines = text.split("\n")
+    # A simple heuristic to find "1. answer" or "1 answer"
+    pattern = re.compile(r"^\s*(\d+)[\.\)]?\s+(.+)$")
+    for line in lines:
+        line = line.strip()
+        m = pattern.match(line)
+        if m:
+            q_num = int(m.group(1))
+            ans_text = m.group(2).strip()
+            if q_num >= 1 and q_num <= 40:
+                extracted[str(q_num)] = ans_text
+                
+    return {"extracted": extracted, "raw_text": text}

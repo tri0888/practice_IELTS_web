@@ -78,12 +78,12 @@ export default function TestLibraryPage() {
           position: 'relative',
         }}>
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>10</div>
-            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Books (11-20)</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>9</div>
+            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Books (11-19)</div>
           </div>
           <div style={{ width: 1, background: 'rgba(255,255,255,0.15)' }} />
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>40</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>36</div>
             <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tests</div>
           </div>
           <div style={{ width: 1, background: 'rgba(255,255,255,0.15)' }} />

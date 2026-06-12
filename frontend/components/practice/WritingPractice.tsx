@@ -45,11 +45,18 @@ export default function WritingPractice({ book, test }: WritingPracticeProps) {
     let cancelled = false
     async function load() {
       try {
-        const resp = await fetch(`${BACKEND}/tests/${book}/${test}/content`)
-        if (!resp.ok) throw new Error('Failed to load')
-        const data = await resp.json()
+        const defaultContent: ContentData = {
+          writing: {
+            total_questions: 2,
+            duration_minutes: 60,
+            tasks: [
+              { task_number: 1, pages: [], content_text: '' },
+              { task_number: 2, pages: [], content_text: '' }
+            ]
+          }
+        }
         if (!cancelled) {
-          setContent(data)
+          setContent(defaultContent)
         }
 
         // Load practice layout

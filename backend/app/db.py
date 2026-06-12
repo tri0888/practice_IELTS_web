@@ -38,3 +38,11 @@ def users_collection():
 
 def audio_collection():
     return _db["audio_assets"] if _db is not None else None
+
+
+def layouts_collection():
+    return _db["layouts"] if _db is not None else None
+
+
+def answers_collection():
+    return _db["answers"] if _db is not None else None

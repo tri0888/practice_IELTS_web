@@ -118,11 +118,19 @@ export default function ReadingPractice({ book, test }: ReadingPracticeProps) {
     let cancelled = false
     async function load() {
       try {
-        const resp = await fetch(`${BACKEND}/tests/${book}/${test}/content`)
-        if (!resp.ok) throw new Error('Failed to load')
-        const data = await resp.json()
+        const defaultContent: ContentData = {
+          reading: {
+            total_questions: 40,
+            duration_minutes: 60,
+            passages: [
+              { passage_number: 1, title: 'Passage 1', passage_text: '', question_range: '1-13', questions_text: '' },
+              { passage_number: 2, title: 'Passage 2', passage_text: '', question_range: '14-26', questions_text: '' },
+              { passage_number: 3, title: 'Passage 3', passage_text: '', question_range: '27-40', questions_text: '' },
+            ]
+          }
+        }
         if (!cancelled) {
-          setContent(data)
+          setContent(defaultContent)
           const init: Record<number, string> = {}
           for (let i = 1; i <= 40; i++) init[i] = ''
           setAnswers(init)
@@ -298,7 +306,11 @@ export default function ReadingPractice({ book, test }: ReadingPracticeProps) {
   }
 
   const getQuestionRange = (range: string): number[] => {
-    const [start, end] = range.split('-').map(Number)
+    if (!range) return []
+    const parts = range.split('-')
+    const start = Number(parts[0])
+    const end = parts[1] ? Number(parts[1]) : start // Nếu không có dấu "-", end sẽ tự động nhận giá trị của start
+    if (isNaN(start) || isNaN(end)) return []
     return Array.from({ length: end - start + 1 }, (_, i) => start + i)
   }
 
@@ -397,7 +409,21 @@ export default function ReadingPractice({ book, test }: ReadingPracticeProps) {
                     setActivePassage(pIdx)
                     const targetPassage = passages[pIdx]
                     if (targetPassage) {
-                      const targetGroups = parseQuestionGroups(targetPassage.questions_text)
+                      let targetGroups: any[] = []
+                      if (practiceLayout && practiceLayout.reading) {
+                        const layout = practiceLayout.reading.find((p: any) => p.passage === pIdx + 1)
+                        if (layout && layout.groups) {
+                          targetGroups = layout.groups.map((g: any) => {
+                            const parts = g.range.split('-')
+                            const start = Number(parts[0])
+                            const end = parts[1] ? Number(parts[1]) : start
+                            return { range: g.range, start, end }
+                          })
+                        }
+                      }
+                      if (targetGroups.length === 0) {
+                        targetGroups = parseQuestionGroups(targetPassage.questions_text)
+                      }
                       const groupIdx = targetGroups.findIndex(g => q >= g.start && q <= g.end)
                       if (groupIdx >= 0) {
                         setActiveGroupIndex(groupIdx)
@@ -454,7 +480,7 @@ export default function ReadingPractice({ book, test }: ReadingPracticeProps) {
             </div>
 
             {/* Questions PDF page */}
-            <PDFViewer book={book} test={parseInt(test, 10)} partKey={`reading_q_${activePassage + 1}`} pages={[activeQuestionPage]} style={{ padding: 0, background: 'transparent', flexGrow: 1 }} />
+            <PDFViewer book={book} test={parseInt(test, 10)} pages={[activeQuestionPage]} style={{ padding: 0, background: 'transparent', flexGrow: 1 }} />
           </div>
         </div>
 

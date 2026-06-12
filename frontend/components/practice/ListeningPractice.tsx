@@ -84,11 +84,36 @@ export default function ListeningPractice({ book, test }: ListeningPracticeProps
     let cancelled = false
     async function load() {
       try {
-        const resp = await fetch(`${BACKEND}/tests/${book}/${test}/content`)
-        if (!resp.ok) throw new Error('Failed to load')
-        const data = await resp.json()
+        // Use default structure since content endpoint is deprecated
+        const defaultContent: ContentData = {
+          listening: {
+            total_questions: 40,
+            duration_minutes: 30,
+            sections: [
+              { section_number: 1, question_range: '1-10', instruction: '', content_text: '', audio_file: '' },
+              { section_number: 2, question_range: '11-20', instruction: '', content_text: '', audio_file: '' },
+              { section_number: 3, question_range: '21-30', instruction: '', content_text: '', audio_file: '' },
+              { section_number: 4, question_range: '31-40', instruction: '', content_text: '', audio_file: '' },
+            ]
+          }
+        }
+
+        try {
+          const audioResp = await fetch(`${BACKEND}/tests/${book}/${test}/audio`)
+          if (audioResp.ok) {
+            const audioData = await audioResp.json()
+            if (audioData && audioData.length > 0) {
+              defaultContent.listening.sections.forEach((sec, idx) => {
+                 sec.audio_file = audioData[idx]?.file_name || audioData[0]?.file_name || ''
+              })
+            }
+          }
+        } catch (e) {
+          console.error("Audio fetch failed", e)
+        }
+
         if (!cancelled) {
-          setContent(data)
+          setContent(defaultContent)
           // Init answers for questions 1-40
           const init: Record<number, string> = {}
           for (let i = 1; i <= 40; i++) init[i] = ''
