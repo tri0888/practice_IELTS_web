@@ -33,19 +33,31 @@ def get_practice_layout_dict(book: int, test: int):
         return layouts[book_str][test_str]
     return None
 
-def get_test_answers_dict(book: int, test: int) -> dict:
+def get_test_answers_dict(book: int, test: int, skill: str = None) -> dict:
     if db.is_available():
         coll = db.answers_collection()
         if coll is not None:
             doc = coll.find_one({"book": book, "test": test}, {"_id": 0})
-            if doc and "answers" in doc:
-                return doc["answers"]
+            if doc:
+                if skill and skill in doc:
+                    return doc[skill]
+                elif "answers" in doc:
+                    return doc["answers"]
                 
     t = seeder.find_test(seeder.get_seed_data(), book, test)
     if not t:
         return {}
     answers = {}
     for section in t.get("sections", []):
+        if skill:
+            name = section.get("name", "").lower()
+            is_sec_reading = name.startswith("passage") or name.startswith("reading")
+            is_sec_listening = name.startswith("section") or name.startswith("listening")
+            if skill == "reading" and not is_sec_reading:
+                continue
+            if skill == "listening" and not is_sec_listening:
+                continue
+                
         for row in section.get("rows", []):
             answers[str(row["question_number"])] = {
                 "answer": row.get("answer_text", ""),

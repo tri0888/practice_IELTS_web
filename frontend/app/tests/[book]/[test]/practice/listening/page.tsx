@@ -166,7 +166,7 @@ export default function ListeningPracticePage() {
     if (layout && layout.pages) {
       return layout.pages
     }
-    const basePage = 11 + (secNum - 1) * 2
+    const basePage = 10 + (secNum - 1) * 2
     return [basePage, basePage + 1]
   }, [content, activeSection, practiceLayout])
 
@@ -187,7 +187,7 @@ export default function ListeningPracticePage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ responses }),
         }),
-        fetch(`${BACKEND}/tests/${book}/${test}/answers`),
+        fetch(`${BACKEND}/tests/${book}/${test}/answers?skill=listening`),
       ])
       const submitData = await submitResp.json()
       setResult(submitData.result)
@@ -207,18 +207,17 @@ export default function ListeningPracticePage() {
   }
 
   const checkAnswer = (q: number) => {
-    if (!answerKey || !answerKey[String(q)]) return false
-    const userAns = (answers[q] ?? '').trim().toLowerCase()
-    const correctAns = (answerKey[String(q)].answer ?? '').trim().toLowerCase()
-    if (userAns === correctAns) return true
-    const parts = (answerKey[String(q)].answer ?? '').split(/\s*[-–—]\s*/)
-    const firstWord = parts[0]?.trim().toLowerCase() ?? ''
-    return userAns === firstWord
+    const ak = getCorrectAnswerForQuestion(q, answerKey)
+    if (!ak) return false
+    const userAns = answers[q] ?? ''
+    const correctAns = ak.answer ?? ''
+    return checkUserAnswer(userAns, correctAns)
   }
 
   const getDisplayAnswer = (q: number) => {
-    if (!answerKey || !answerKey[String(q)]) return ''
-    const ans = answerKey[String(q)].answer
+    const ak = getCorrectAnswerForQuestion(q, answerKey)
+    if (!ak) return ''
+    const ans = ak.answer
     const parts = ans.split(/\s*[-–—]\s*/)
     if (parts.length > 1 && parts[0].length < 10) {
       return parts[0].trim()
@@ -336,6 +335,7 @@ export default function ListeningPracticePage() {
               {getQuestionRange(sections[activeSection].question_range).map(q => {
                 const isCorrect = checkAnswer(q)
                 const dispAnswer = getDisplayAnswer(q)
+                const ak = getCorrectAnswerForQuestion(q, answerKey)
                 return (
                   <div key={q} className="listening-q-row">
                     <span className="question-block__number">{q}</span>
@@ -348,13 +348,13 @@ export default function ListeningPracticePage() {
                       disabled={isSubmitted}
                       style={{
                         flex: 1,
-                        ...(isSubmitted && answerKey && answerKey[String(q)] ? {
+                        ...(isSubmitted && ak ? {
                           borderColor: isCorrect ? 'var(--status-correct)' : 'var(--status-wrong)',
                           background: isCorrect ? '#f0fdf4' : '#fef2f2',
                         } : {})
                       }}
                     />
-                    {isSubmitted && answerKey && answerKey[String(q)] && (
+                    {isSubmitted && ak && (
                       <div className="listening-q-feedback" style={{ color: isCorrect ? 'var(--status-correct)' : 'var(--status-wrong)' }}>
                         {isCorrect ? '✓' : '✗'} <span style={{ color: 'var(--status-correct)' }}>{dispAnswer}</span>
                       </div>
@@ -418,7 +418,7 @@ export default function ListeningPracticePage() {
               </h4>
               <div className="listening-explanations-grid">
                 {getQuestionRange(sections[activeSection].question_range).map(q => {
-                  const ak = answerKey[String(q)]
+                  const ak = getCorrectAnswerForQuestion(q, answerKey)
                   if (!ak || !ak.explanation) return null
                   const isCorrect = checkAnswer(q)
                   const dispAnswer = getDisplayAnswer(q)
@@ -455,4 +455,110 @@ export default function ListeningPracticePage() {
       />
     </div>
   )
+}
+
+function cleanSpaces(s: string): string {
+  return s.replace(/\s+/g, ' ').trim();
+}
+
+function cleanPunctuation(s: string): string {
+  return s.replace(/^[.,;:!?"'\s]+|[.,;:!?"'\s]+$/g, '');
+}
+
+function expandParentheses(s: string): string[] {
+  const match = s.match(/\(([^)]*)\)/);
+  if (!match) {
+    return [cleanSpaces(s)];
+  }
+  const index = match.index!;
+  const length = match[0].length;
+  const prefix = s.slice(0, index);
+  const inner = match[1];
+  const suffix = s.slice(index + length);
+
+  const opt1 = prefix + suffix;
+  const opt2 = prefix + inner + suffix;
+
+  const res1 = expandParentheses(opt1);
+  const res2 = expandParentheses(opt2);
+
+  return Array.from(new Set([...res1, ...res2]));
+}
+
+function expandSlashes(s: string): string[] {
+  const tokens = s.split(/\s+/).filter(t => t.length > 0);
+  if (tokens.length === 0) return [""];
+
+  const tokenVariations = tokens.map(token => {
+    if (token.includes('/')) {
+      const parts = token.split('/').filter(p => p.length > 0);
+      return parts.length > 0 ? parts : [token];
+    }
+    return [token];
+  });
+
+  const cartesian = (r: string[][], a: string[]) => r.flatMap(d => a.map(e => [...d, e]));
+  const combinations = tokenVariations.reduce(cartesian, [[]]);
+
+  return combinations.map(combo => combo.join(' '));
+}
+
+function getCorrectAnswersList(correctAnsStr: string): string[] {
+  if (!correctAnsStr) return [];
+  const mainOptions = correctAnsStr.split(/\s+\/\s+/);
+  const allCorrect: string[] = [];
+
+  for (const option of mainOptions) {
+    const parentheticalExpanded = expandParentheses(option);
+    for (const pExpanded of parentheticalExpanded) {
+      const slashExpanded = expandSlashes(pExpanded);
+      for (const sExpanded of slashExpanded) {
+        allCorrect.push(cleanPunctuation(sExpanded.toLowerCase()));
+      }
+    }
+  }
+
+  allCorrect.push(cleanPunctuation(correctAnsStr.toLowerCase()));
+  return Array.from(new Set(allCorrect));
+}
+
+function checkUserAnswer(userAnsStr: string, correctAnsStr: string): boolean {
+  const cleanedUser = cleanPunctuation(cleanSpaces(userAnsStr).toLowerCase());
+  if (!cleanedUser) return false;
+
+  const correctAnswersList = getCorrectAnswersList(correctAnsStr);
+  if (correctAnswersList.includes(cleanedUser)) {
+    return true;
+  }
+
+  const parts = correctAnsStr.split(/\s*[-–—]\s*/);
+  if (parts.length > 1) {
+    const firstWordCleaned = cleanPunctuation(cleanSpaces(parts[0]).toLowerCase());
+    if (cleanedUser === firstWordCleaned) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function getCorrectAnswerForQuestion(q: number, answerKey: any): { answer: string; explanation: string } | null {
+  if (!answerKey) return null;
+  if (answerKey[String(q)]) {
+    return answerKey[String(q)];
+  }
+  for (const key of Object.keys(answerKey)) {
+    const cleanedKey = key.replace(/–|—/g, '-');
+    if (cleanedKey.includes('-')) {
+      const parts = cleanedKey.split('-');
+      if (parts.length === 2) {
+        const start = parseInt(parts[0], 10);
+        const end = parseInt(parts[1], 10);
+        if (!isNaN(start) && !isNaN(end) && q >= start && q <= end) {
+          return answerKey[key];
+        }
+      }
+    }
+  }
+  return null;
 }

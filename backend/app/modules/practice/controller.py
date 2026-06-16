@@ -11,8 +11,8 @@ def get_practice_layout(book: int, test: int):
     return layout
 
 @router.get("/api/tests/{book}/{test}/answers")
-def get_test_answers(book: int, test: int):
-    answers = services.get_test_answers_dict(book, test)
+def get_test_answers(book: int, test: int, skill: str = None):
+    answers = services.get_test_answers_dict(book, test, skill)
     if not answers:
          raise HTTPException(status_code=404, detail="Answers not found")
     return {"book": book, "test": test, "answers": answers}

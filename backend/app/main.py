@@ -21,8 +21,8 @@ app.add_middleware(
 )
 
 # Mount all routers
-app.include_router(tests_router)
 app.include_router(practice_router)
+app.include_router(tests_router)
 app.include_router(attempts_router)
 app.include_router(admin_router)
 app.include_router(audio_router)

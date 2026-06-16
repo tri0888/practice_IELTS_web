@@ -3,4 +3,5 @@ Books
 node_modules
 __pycache__
 .next
-.cache
+.cache\
+.agent
