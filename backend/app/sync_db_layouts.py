@@ -7,7 +7,7 @@ app_dir = Path(__file__).resolve().parent
 backend_dir = app_dir.parent
 sys.path.append(str(backend_dir))
 
-from app import db
+from app.models import database as db
 
 def main():
     print("Starting database layouts synchronization...")

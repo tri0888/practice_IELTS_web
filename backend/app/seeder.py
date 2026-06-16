@@ -2,6 +2,15 @@ from pathlib import Path
 import json
 
 
+_seed_data = None
+
+def get_seed_data() -> dict:
+    global _seed_data
+    if _seed_data is None:
+        _seed_data = load_seed()
+    return _seed_data
+
+
 def load_seed() -> dict:
     repo_root = Path(__file__).resolve().parents[2]
     output_dir = repo_root / "phase0" / "output"

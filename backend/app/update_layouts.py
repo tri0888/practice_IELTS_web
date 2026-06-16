@@ -18,7 +18,7 @@ backend_dir = Path(__file__).resolve().parent
 repo_root = backend_dir.parent.parent
 sys.path.append(str(backend_dir.parent))
 
-from app import db
+from app.models import database as db
 
 def parse_trang(text):
     # Normalize dashes and spaces
@@ -346,33 +346,6 @@ def main():
         print(f"  audio_assets: {r_audio.deleted_count}")
         print(f"  attempts: {r_attempts.deleted_count}")
         
-    # 4. Clear cache directory for pdf parts and pdf pages
-    cache_dir = repo_root / ".cache"
-    parts_cache = cache_dir / "pdf-parts"
-    pages_cache = cache_dir / "pdf-pages"
-    
-    deleted_parts = 0
-    deleted_pages = 0
-    
-    if parts_cache.exists():
-        for p in parts_cache.glob("cambridge*"):
-            try:
-                if p.is_file():
-                    p.unlink()
-                    deleted_parts += 1
-            except Exception as e:
-                print(f"Failed to delete cached part {p}: {e}")
-                
-    if pages_cache.exists():
-        for p in pages_cache.glob("cambridge*"):
-            try:
-                if p.is_file():
-                    p.unlink()
-                    deleted_pages += 1
-            except Exception as e:
-                print(f"Failed to delete cached page {p}: {e}")
-                
-    print(f"Cleared image caches: deleted {deleted_parts} parts, {deleted_pages} pages.")
     print("Process completed successfully!")
 
 if __name__ == '__main__':

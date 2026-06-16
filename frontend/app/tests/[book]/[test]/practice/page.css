@@ -1,0 +1,48 @@
+.practice-hub-breadcrumb {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+
+.practice-hub-breadcrumb-sep {
+  margin: 0 8px;
+}
+
+.practice-hub-breadcrumb-active {
+  color: var(--text-primary);
+}
+
+.practice-hub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  margin-top: 24px;
+}
+
+.practice-hub-card-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.practice-hub-card {
+  cursor: pointer;
+  text-align: center;
+  padding: 32px;
+}
+
+.practice-hub-card__emoji {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.practice-hub-card__title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.practice-hub-card__desc {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+}

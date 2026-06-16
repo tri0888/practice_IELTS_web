@@ -2,6 +2,7 @@
 import { useMemo } from 'react'
 import useSWR from 'swr'
 import Link from 'next/link'
+import './page.css'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -38,71 +39,35 @@ export default function TestLibraryPage() {
   return (
     <div className="container fade-in">
       {/* Hero Section */}
-      <div style={{
-        background: 'linear-gradient(135deg, #1a1d2e 0%, #2d3148 100%)',
-        borderRadius: 'var(--radius-xl)',
-        padding: '48px 40px',
-        marginBottom: '32px',
-        color: 'white',
-        position: 'relative',
-        overflow: 'hidden',
-      }}>
-        <div style={{
-          position: 'absolute',
-          top: -40,
-          right: -40,
-          width: 200,
-          height: 200,
-          borderRadius: '50%',
-          background: 'rgba(200, 16, 46, 0.15)',
-        }} />
-        <div style={{
-          position: 'absolute',
-          bottom: -60,
-          right: 120,
-          width: 160,
-          height: 160,
-          borderRadius: '50%',
-          background: 'rgba(59, 130, 246, 0.1)',
-        }} />
-        <h1 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '8px', position: 'relative' }}>
+      <div className="home-hero">
+        <div className="home-hero__shape-1" />
+        <div className="home-hero__shape-2" />
+        <h1 className="home-hero__title">
           Cambridge IELTS Practice
         </h1>
-        <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '1.05rem', maxWidth: 600, position: 'relative' }}>
+        <p className="home-hero__subtitle">
           Luyện thi IELTS với đề thi Cambridge chính thức. Giao diện mô phỏng thi thật trên máy tính.
         </p>
-        <div style={{
-          display: 'flex',
-          gap: '24px',
-          marginTop: '24px',
-          position: 'relative',
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>9</div>
-            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Books (11-19)</div>
+        <div className="home-hero__stats">
+          <div className="home-hero__stat">
+            <div className="home-hero__stat-num">9</div>
+            <div className="home-hero__stat-label">Books (11-19)</div>
           </div>
-          <div style={{ width: 1, background: 'rgba(255,255,255,0.15)' }} />
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>36</div>
-            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Tests</div>
+          <div className="home-hero__divider" />
+          <div className="home-hero__stat">
+            <div className="home-hero__stat-num">36</div>
+            <div className="home-hero__stat-label">Tests</div>
           </div>
-          <div style={{ width: 1, background: 'rgba(255,255,255,0.15)' }} />
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800 }}>4</div>
-            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Skills</div>
+          <div className="home-hero__divider" />
+          <div className="home-hero__stat">
+            <div className="home-hero__stat-num">4</div>
+            <div className="home-hero__stat-label">Skills</div>
           </div>
         </div>
       </div>
 
       {error && (
-        <div style={{
-          background: '#fef2f2',
-          border: '1px solid #fecaca',
-          borderRadius: 'var(--radius-md)',
-          padding: '16px',
-          color: '#991b1b',
-          marginBottom: '24px',
-        }}>
+        <div className="home-error">
           ⚠️ Không thể tải danh sách bài test. Hãy đảm bảo backend đang chạy.
         </div>
       )}
@@ -110,7 +75,7 @@ export default function TestLibraryPage() {
       {isLoading && (
         <>
           {[11, 12].map((bk) => (
-            <div key={bk} style={{ marginBottom: '40px' }}>
+            <div key={bk} className="home-book-section">
               <div style={{ marginBottom: '16px' }}>
                 <div className="skeleton" style={{ width: 180, height: 20, marginBottom: 8 }} />
                 <div className="skeleton" style={{ width: 120, height: 14 }} />
@@ -140,10 +105,10 @@ export default function TestLibraryPage() {
       {data && Array.isArray(data) && (
         <>
           {sortedBooks.map((book) => (
-            <div key={book} style={{ marginBottom: '40px' }}>
-              <div style={{ marginBottom: '16px', borderLeft: '4px solid var(--ielts-red)', paddingLeft: '12px' }}>
-                <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0 }}>Cambridge IELTS {book}</h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.88rem', margin: '4px 0 0' }}>Academic • {testsByBook[book].length} Tests Available</p>
+            <div key={book} className="home-book-section">
+              <div className="home-book-header">
+                <h2 className="home-book-title">Cambridge IELTS {book}</h2>
+                <p className="home-book-subtitle">Academic • {testsByBook[book].length} Tests Available</p>
               </div>
 
               <div className="book-grid" style={{ paddingLeft: 0, paddingRight: 0 }}>

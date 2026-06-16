@@ -1,4 +1,5 @@
 import React from 'react'
+import './PDFViewer.css'
 
 interface PDFViewerProps {
   pages: number[]
@@ -45,4 +46,3 @@ export default function PDFViewer({ pages, containerRef, style, book, pdfType, p
     </div>
   )
 }
-

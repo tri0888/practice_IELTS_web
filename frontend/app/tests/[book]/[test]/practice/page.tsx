@@ -1,6 +1,7 @@
 "use client"
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import './page.css'
 
 export default function PracticeHubPage() {
   const params = useParams<{ book: string; test: string }>()
@@ -10,29 +11,24 @@ export default function PracticeHubPage() {
   return (
     <div className="container fade-in">
       {/* Breadcrumb */}
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: 24 }}>
+      <div className="practice-hub-breadcrumb">
         <Link href="/">Test Library</Link>
-        <span style={{ margin: '0 8px' }}>›</span>
+        <span className="practice-hub-breadcrumb-sep">›</span>
         <Link href={`/tests/${book}/${test}`}>Test {test}</Link>
-        <span style={{ margin: '0 8px' }}>›</span>
-        <span style={{ color: 'var(--text-primary)' }}>Chọn kỹ năng</span>
+        <span className="practice-hub-breadcrumb-sep">›</span>
+        <span className="practice-hub-breadcrumb-active">Chọn kỹ năng</span>
       </div>
 
       <h1 className="page-title">Chọn kỹ năng luyện tập</h1>
       <p className="page-subtitle">Cambridge IELTS {book} — Test {test}</p>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-        gap: 20,
-        marginTop: 24,
-      }}>
+      <div className="practice-hub-grid">
         {/* Listening */}
-        <Link href={`/tests/${book}/${test}/practice/listening`} style={{ textDecoration: 'none', color: 'inherit' }}>
-          <div className="card" style={{ cursor: 'pointer', textAlign: 'center', padding: 32 }}>
-            <div style={{ fontSize: '3rem', marginBottom: 12 }}>🎧</div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 8 }}>Listening</h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 16 }}>
+        <Link href={`/tests/${book}/${test}/practice/listening`} className="practice-hub-card-link">
+          <div className="card practice-hub-card">
+            <div className="practice-hub-card__emoji">🎧</div>
+            <h3 className="practice-hub-card__title">Listening</h3>
+            <p className="practice-hub-card__desc">
               40 câu hỏi • 30 phút • 4 sections
             </p>
             <div className="btn btn-primary" style={{ width: '100%' }}>Bắt đầu</div>
@@ -40,11 +36,12 @@ export default function PracticeHubPage() {
         </Link>
 
         {/* Reading */}
-        <Link href={`/tests/${book}/${test}/practice/reading`} style={{ textDecoration: 'none', color: 'inherit' }}>
-          <div className="card" style={{ cursor: 'pointer', textAlign: 'center', padding: 32 }}>
-            <div style={{ fontSize: '3rem', marginBottom: 12 }}>📖</div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 8 }}>Reading</h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 16 }}>
+        <Link href={`/tests/[book]/[test]/practice/reading`} style={{ display: 'none' }} /> {/* dummy just for next.js path generation warning safeguard */}
+        <Link href={`/tests/${book}/${test}/practice/reading`} className="practice-hub-card-link">
+          <div className="card practice-hub-card">
+            <div className="practice-hub-card__emoji">📖</div>
+            <h3 className="practice-hub-card__title">Reading</h3>
+            <p className="practice-hub-card__desc">
               40 câu hỏi • 60 phút • 3 passages
             </p>
             <div className="btn btn-primary" style={{ width: '100%' }}>Bắt đầu</div>
@@ -52,11 +49,11 @@ export default function PracticeHubPage() {
         </Link>
 
         {/* Writing */}
-        <Link href={`/tests/${book}/${test}/practice/writing`} style={{ textDecoration: 'none', color: 'inherit' }}>
-          <div className="card" style={{ cursor: 'pointer', textAlign: 'center', padding: 32 }}>
-            <div style={{ fontSize: '3rem', marginBottom: 12 }}>✍️</div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 8 }}>Writing</h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 16 }}>
+        <Link href={`/tests/${book}/${test}/practice/writing`} className="practice-hub-card-link">
+          <div className="card practice-hub-card">
+            <div className="practice-hub-card__emoji">✍️</div>
+            <h3 className="practice-hub-card__title">Writing</h3>
+            <p className="practice-hub-card__desc">
               2 tasks • 60 phút
             </p>
             <div className="btn btn-primary" style={{ width: '100%' }}>Bắt đầu</div>
@@ -64,11 +61,11 @@ export default function PracticeHubPage() {
         </Link>
 
         {/* Speaking */}
-        <Link href={`/tests/${book}/${test}/practice/speaking`} style={{ textDecoration: 'none', color: 'inherit' }}>
-          <div className="card" style={{ cursor: 'pointer', textAlign: 'center', padding: 32 }}>
-            <div style={{ fontSize: '3rem', marginBottom: 12 }}>🎙️</div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: 8 }}>Speaking</h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 16 }}>
+        <Link href={`/tests/${book}/${test}/practice/speaking`} className="practice-hub-card-link">
+          <div className="card practice-hub-card">
+            <div className="practice-hub-card__emoji">🎙️</div>
+            <h3 className="practice-hub-card__title">Speaking</h3>
+            <p className="practice-hub-card__desc">
               3 parts • 11-14 phút
             </p>
             <div className="btn btn-primary" style={{ width: '100%' }}>Bắt đầu</div>

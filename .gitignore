@@ -1,9 +1,6 @@
 .venv
-phase0/.python_deps
 Books
 node_modules
 __pycache__
 .next
 .cache
-output
-scratch

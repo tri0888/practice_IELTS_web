@@ -1,0 +1,114 @@
+.writing-timer-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.writing-word-count-badge-top {
+  color: rgba(255, 255, 255, 0.5);
+  margin-left: 8px;
+}
+
+.writing-left-panel {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+.writing-left-tabs {
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.writing-right-panel {
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+.writing-editor-container {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.writing-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.writing-editor-title {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.writing-word-count-badge {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  transition: all 0.2s;
+}
+
+.writing-word-count-badge--incomplete {
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+}
+
+.writing-word-count-badge--complete {
+  color: var(--status-correct);
+  background: #f0fdf4;
+  border: 1px solid var(--status-correct);
+}
+
+.writing-textarea {
+  flex-grow: 1;
+  width: 100%;
+  min-height: 320px;
+  padding: 16px;
+  font-size: 1rem;
+  line-height: 1.6;
+  font-family: inherit;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-medium);
+  resize: none;
+  outline: none;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);
+  transition: all 0.2s;
+  color: var(--text-primary);
+}
+
+.writing-textarea:disabled {
+  background: var(--bg-secondary);
+}
+
+.writing-textarea:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.writing-model-answer-info-card {
+  margin-top: 12px;
+  border-left: 4px solid var(--accent-blue);
+  background: var(--bg-secondary);
+}
+
+.writing-model-answer-info-card__title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--accent-blue);
+  margin-bottom: 8px;
+}
+
+.writing-model-answer-info-card__desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
