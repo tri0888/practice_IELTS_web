@@ -1,11 +1,13 @@
 import re
 import itertools
+from datetime import datetime
 from uuid import uuid4
 from fastapi import HTTPException
 from app.models import database as db
 from app import seeder
 from app.models.schemas import AttemptCreate, AttemptSubmit
 from app.modules.practice.services import get_test_answers_dict
+from app.modules.tests.services import get_ets_answers
 
 in_memory_attempts = {}
 
@@ -15,7 +17,7 @@ def start_attempt(a: AttemptCreate):
         "book": a.book,
         "test": a.test,
         "skill": a.skill,
-        "started_at": None,
+        "started_at": datetime.utcnow().isoformat(),
         "submitted_at": None,
         "responses": [],
         "result": None
@@ -40,7 +42,7 @@ def submit_attempt(attempt_id: str, body: AttemptSubmit):
             raise HTTPException(status_code=404, detail="attempt not found")
             
         result = _grade_attempt(attempt, body.responses)
-        coll.update_one({"id": attempt_id}, {"$set": {"responses": body.responses, "result": result, "submitted_at": None}})
+        coll.update_one({"id": attempt_id}, {"$set": {"responses": body.responses, "result": result, "submitted_at": datetime.utcnow().isoformat()}})
         return {"id": attempt_id, "result": result}
     else:
         attempt = in_memory_attempts.get(attempt_id)
@@ -50,6 +52,7 @@ def submit_attempt(attempt_id: str, body: AttemptSubmit):
         result = _grade_attempt(attempt, body.responses)
         attempt["responses"] = body.responses
         attempt["result"] = result
+        attempt["submitted_at"] = datetime.utcnow().isoformat()
         return {"id": attempt_id, "result": result}
 
 def get_result(attempt_id: str):
@@ -58,12 +61,48 @@ def get_result(attempt_id: str):
         attempt = coll.find_one({"id": attempt_id}, {"_id": 0})
         if not attempt:
             raise HTTPException(status_code=404, detail="attempt not found")
-        return {"id": attempt_id, "result": attempt.get("result")}
     else:
         attempt = in_memory_attempts.get(attempt_id)
         if not attempt:
             raise HTTPException(status_code=404, detail="attempt not found")
-        return {"id": attempt_id, "result": attempt.get("result")}
+            
+    skill = attempt.get("skill", "").lower()
+    is_reading = skill.startswith("passage") or skill == "reading"
+    is_listening = skill == "listening"
+    
+    correct_answers = {}
+    if is_reading or is_listening:
+        skill_key = "reading" if is_reading else "listening"
+        db_answers = get_test_answers_dict(attempt.get("book", 11), attempt["test"], skill=skill_key)
+        if db_answers:
+            correct = db_answers
+        elif is_reading:
+            correct = seeder.collect_reading_answers(seeder.get_seed_data(), attempt.get("book", 11), attempt["test"])
+        else:
+            correct = seeder.collect_listening_answers(seeder.get_seed_data(), attempt.get("book", 11), attempt["test"])
+            
+        for q in range(1, 41):
+            ans = get_correct_answer_for_question(q, correct)
+            correct_answers[str(q)] = ans
+    elif skill in ("ets_lc", "ets_rc"):
+        pdf_type = "lc" if skill == "ets_lc" else "rc"
+        year = str(attempt.get("book", "2026"))
+        ans_data = get_ets_answers(pdf_type, attempt.get("test", 1), year)
+        correct = ans_data.get("answers", {})
+        for q, ans in correct.items():
+            correct_answers[str(q)] = ans
+            
+    return {
+        "id": attempt_id,
+        "book": attempt.get("book"),
+        "test": attempt.get("test"),
+        "skill": attempt.get("skill"),
+        "started_at": attempt.get("started_at"),
+        "submitted_at": attempt.get("submitted_at"),
+        "responses": attempt.get("responses", []),
+        "result": attempt.get("result"),
+        "correct_answers": correct_answers
+    }
 
 def _grade_attempt(attempt: dict, responses: list) -> dict:
     skill = attempt.get("skill", "").lower()
@@ -89,6 +128,25 @@ def _grade_attempt(attempt: dict, responses: list) -> dict:
                 total += 1
                 correct_ans = get_correct_answer_for_question(q, correct)
                 if check_user_answer(ans, correct_ans):
+                    right += 1
+            except Exception:
+                pass
+        return {"total": total, "correct": right}
+    elif skill in ("ets_lc", "ets_rc"):
+        pdf_type = "lc" if skill == "ets_lc" else "rc"
+        year = str(attempt.get("book", "2026"))
+        ans_data = get_ets_answers(pdf_type, attempt.get("test", 1), year)
+        correct = ans_data.get("answers", {})
+        
+        total = 0
+        right = 0
+        for r in responses:
+            try:
+                q = int(r.get("question_number"))
+                ans = str(r.get("answer", "")).strip().upper()
+                total += 1
+                correct_ans = correct.get(str(q), "").strip().upper()
+                if ans and correct_ans and ans == correct_ans:
                     right += 1
             except Exception:
                 pass
@@ -195,3 +253,26 @@ def get_correct_answer_for_question(q: int, correct: dict) -> str:
                 except ValueError:
                     pass
     return ""
+
+def list_attempts():
+    if db.is_available():
+        coll = db.attempts_collection()
+        # Return all attempts sorted by started_at descending
+        return list(coll.find({}, {"_id": 0}).sort("started_at", -1))
+    else:
+        attempts_list = list(in_memory_attempts.values())
+        attempts_list.sort(key=lambda x: x.get("started_at") or "", reverse=True)
+        return attempts_list
+
+def delete_attempt(attempt_id: str):
+    if db.is_available():
+        coll = db.attempts_collection()
+        res = coll.delete_one({"id": attempt_id})
+        if res.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="attempt not found")
+        return {"status": "ok", "deleted": attempt_id}
+    else:
+        if attempt_id in in_memory_attempts:
+            del in_memory_attempts[attempt_id]
+            return {"status": "ok", "deleted": attempt_id}
+        raise HTTPException(status_code=404, detail="attempt not found")

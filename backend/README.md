@@ -19,7 +19,7 @@ source .venv/Scripts/activate
 pip install -r backend/requirements.txt
 
 # Start dev server on port 8000
-uvicorn backend.app.main:app --reload --port 8000
+uvicorn app.main:app --reload --port 8000
 ```
 
 The service will run at [http://localhost:8000](http://localhost:8000).

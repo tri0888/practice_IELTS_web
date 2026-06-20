@@ -15,3 +15,11 @@ def submit_attempt(attempt_id: str, body: AttemptSubmit):
 @router.get("/{attempt_id}/result")
 def get_result(attempt_id: str):
     return services.get_result(attempt_id)
+
+@router.get("")
+def list_attempts():
+    return services.list_attempts()
+
+@router.delete("/{attempt_id}")
+def delete_attempt(attempt_id: str):
+    return services.delete_attempt(attempt_id)

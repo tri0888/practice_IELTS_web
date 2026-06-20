@@ -18,8 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </Link>
           <nav className="ielts-header__nav">
-            <Link href="/">Test Library</Link>
-            <Link href="/">Dashboard</Link>
+            <Link href="/history">📜 Lịch sử làm bài</Link>
           </nav>
         </header>
         <main>{children}</main>
