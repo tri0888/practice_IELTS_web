@@ -102,6 +102,7 @@ export default function HistoryPage() {
   }
 
   const formatSkillName = (skill: string) => {
+    if (!skill) return ''
     if (skill === 'listening') return '🎧 IELTS Listening'
     if (skill === 'reading') return '📖 IELTS Reading'
     if (skill === 'writing') return '✍️ IELTS Writing'
@@ -112,6 +113,7 @@ export default function HistoryPage() {
   }
 
   const formatTestName = (att: any) => {
+    if (!att || !att.skill) return ''
     if (att.skill.startsWith('ets_')) {
       return `ETS ${att.book} — Đề ${att.test}`
     } else {
@@ -120,6 +122,7 @@ export default function HistoryPage() {
   }
 
   const getQuestionNumbers = (skill: string) => {
+    if (!skill) return []
     const s = skill.toLowerCase()
     if (s === 'ets_rc') {
       return Array.from({ length: 100 }, (_, i) => i + 101)
@@ -204,7 +207,7 @@ export default function HistoryPage() {
           {!isLoading && completedAttempts.map((att: any) => {
             const isGraded = att.result && typeof att.result.correct === 'number'
             const percent = isGraded ? Math.round((att.result.correct / att.result.total) * 100) : null
-            const isToeic = att.skill.startsWith('ets_')
+            const isToeic = att.skill && att.skill.startsWith('ets_')
             const isSelected = selectedAttemptId === att.id
 
             return (
@@ -234,8 +237,8 @@ export default function HistoryPage() {
                     <span 
                       className="history-card-score-badge"
                       style={{
-                        background: att.skill.startsWith('ets_') ? '#f0fdf4' : '#fef2f2',
-                        color: att.skill.startsWith('ets_') ? '#16a34a' : '#dc2626'
+                        background: att.skill && att.skill.startsWith('ets_') ? '#f0fdf4' : '#fef2f2',
+                        color: att.skill && att.skill.startsWith('ets_') ? '#16a34a' : '#dc2626'
                       }}
                     >
                       {att.result.correct}/{att.result.total} ({percent}%)
