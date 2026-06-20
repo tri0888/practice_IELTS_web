@@ -171,8 +171,8 @@ export default function ETSReadingPracticePage() {
     return (
       <div className="container fade-in" style={{ textAlign: 'center', paddingTop: 80 }}>
         <div style={{ fontSize: '2.5rem', marginBottom: 16 }}>📖</div>
-        <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>Đang tải đề thi TOEIC Reading...</div>
-        <div style={{ color: 'var(--text-muted)', marginTop: 8 }}>Đang chuẩn bị đề thi và tài liệu</div>
+        <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>Loading TOEIC Reading Test...</div>
+        <div style={{ color: 'var(--text-muted)', marginTop: 8 }}>Preparing test and materials...</div>
       </div>
     )
   }
@@ -183,9 +183,9 @@ export default function ETSReadingPracticePage() {
       <div className="exam-bar" style={{ borderBottomColor: 'var(--status-correct, #22c55e)' }}>
         <div className="exam-bar__info">
           <span className="exam-bar__badge" style={{ background: '#22c55e' }}>TOEIC RC</span>
-          <span>ETS {year} — Đề thi {test}</span>
+          <span>ETS {year} — Test {test}</span>
           <span className="listening-answered-badge">
-            {answeredCount}/100 đã làm
+            {answeredCount}/100 completed
           </span>
         </div>
         <div className="listening-timer-wrapper">
@@ -194,7 +194,7 @@ export default function ETSReadingPracticePage() {
           </div>
           {!isSubmitted && (
             <button className="btn btn-submit btn-sm" style={{ background: '#22c55e', borderColor: '#22c55e' }} onClick={handleSubmit}>
-              Nộp bài
+              Submit
             </button>
           )}
         </div>
@@ -225,7 +225,7 @@ export default function ETSReadingPracticePage() {
                 onClick={() => setActivePart(part)}
                 style={{ textTransform: 'capitalize' }}
               >
-                {part === 'all' ? 'Tất cả' : part.replace('part', 'Part ')}
+                {part === 'all' ? 'All' : part.replace('part', 'Part ')}
               </button>
             ))}
           </div>
@@ -233,8 +233,8 @@ export default function ETSReadingPracticePage() {
           {/* Answer Inputs Grid */}
           <div className="card" style={{ padding: '12px' }}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Phiếu trả lời trắc nghiệm</span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>* Câu 101 đến 200</span>
+              <span>Answer Sheet</span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>* Questions 101 to 200</span>
             </h3>
 
             <div className="ets-q-grid">
@@ -254,7 +254,7 @@ export default function ETSReadingPracticePage() {
                   }}>
                     <div className="ets-q-card__header">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span className="ets-q-card__num">Câu {q}</span>
+                        <span className="ets-q-card__num">Question {q}</span>
                         <span className="part-badge">{getQuestionPartName(q)}</span>
                       </div>
                     </div>
@@ -308,13 +308,13 @@ export default function ETSReadingPracticePage() {
       <ResultModal
         isOpen={showResult}
         emoji="🎯"
-        title="Kết quả TOEIC Reading"
+        title="TOEIC Reading Result"
         testNumber={test}
         correctCount={correctCount}
         totalCount={100}
-        bandScore={Object.keys(answerKey).length > 0 ? `${correctCount * 5}/495` : 'Đã nộp bài!'}
+        bandScore={Object.keys(answerKey).length > 0 ? `${correctCount * 5}/495` : 'Submitted!'}
         onClose={() => setShowResult(false)}
-        backUrl="/"
+        backUrl="/tests?type=toeic"
       />
     </div>
   )

@@ -58,10 +58,10 @@ export default function ResultModal({
 
         <div style={{ display: 'flex', gap: 12, marginTop: 24, justifyContent: 'center' }}>
           <Link href={backUrl}>
-            <button className="btn btn-secondary">Quay lại</button>
+            <button className="btn btn-secondary">Go Back</button>
           </Link>
           <button className="btn btn-primary" onClick={onClose}>
-            Xem chi tiết
+            View Details
           </button>
         </div>
       </div>

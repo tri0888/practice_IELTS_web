@@ -196,7 +196,7 @@ export default function SpeakingPracticePage() {
       }, 1000)
     } catch (err) {
       console.error("Mic permissions blocked or unavailable:", err)
-      alert("⚠️ Không thể kết nối với microphone của bạn. Hãy cấp quyền truy cập mic cho trang web và thử lại.")
+      alert("⚠️ Unable to access your microphone. Please grant microphone access to this website and try again.")
     }
   }
 
@@ -246,7 +246,7 @@ export default function SpeakingPracticePage() {
       <div className="container fade-in" style={{ textAlign: 'center', paddingTop: 60 }}>
         <div style={{ fontSize: '2rem', marginBottom: 16 }}>🎙️</div>
         <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>Loading Speaking Test...</div>
-        <div style={{ color: 'var(--text-muted)', marginTop: 8 }}>Đang khởi tạo phòng thi nói</div>
+        <div style={{ color: 'var(--text-muted)', marginTop: 8 }}>Initializing Speaking practice room...</div>
       </div>
     )
   }
@@ -268,7 +268,7 @@ export default function SpeakingPracticePage() {
           </div>
           {!isSubmitted && (
             <button className="btn btn-submit btn-sm" onClick={handleSubmit}>
-              Nộp bài
+              Submit
             </button>
           )}
         </div>
@@ -304,25 +304,25 @@ export default function SpeakingPracticePage() {
           <div className="speaking-prompt-container">
             <div>
               <h3 className="speaking-prompt-title">
-                Luyện tập Speaking — Part {activePartIndex + 1}
+                Speaking Practice — Part {activePartIndex + 1}
               </h3>
               <p className="speaking-prompt-desc">
-                {activePartIndex === 0 && 'Giám khảo sẽ hỏi bạn các câu hỏi ngắn về các chủ đề quen thuộc (Gia đình, Bản thân, Sở thích, vv). Hãy click "Bắt đầu ghi âm" và trả lời từng câu hỏi.'}
-                {activePartIndex === 1 && 'Bạn có 1 phút để chuẩn bị nháp dựa trên gợi ý cue card bên trái, và sau đó nói liên tục trong 1 đến 2 phút. Bấm "Bắt đầu chuẩn bị" để đếm ngược.'}
-                {activePartIndex === 2 && 'Giám khảo sẽ hỏi các câu hỏi thảo luận mang tính trừu tượng và học thuật cao hơn liên quan đến chủ đề ở Part 2. Hãy trả lời chi tiết và lập luận rõ ràng.'}
+                {activePartIndex === 0 && 'The examiner will ask you short questions on familiar topics (family, hobbies, self, etc.). Click "Start Recording" and answer each question.'}
+                {activePartIndex === 1 && 'You have 1 minute to prepare notes based on the cue card on the left, then speak continuously for 1 to 2 minutes. Click "Start Preparation" to count down.'}
+                {activePartIndex === 2 && 'The examiner will ask you abstract and academic discussion questions related to the topic in Part 2. Answer in detail and clarify your arguments.'}
               </p>
             </div>
 
             {/* Part 2 Specific Preparation Timer */}
             {activePartIndex === 1 && (
               <div className="card speaking-prep-card">
-                <div className="speaking-prep-title">⏱️ THỜI GIAN CHUẨN BỊ (PART 2)</div>
+                <div className="speaking-prep-title">⏱️ PREPARATION TIME (PART 2)</div>
                 <div className={`speaking-prep-timer ${prepTimeLeft <= 10 ? 'speaking-prep-timer--danger' : ''}`}>
                   {prepTimeLeft}s
                 </div>
                 <div className="speaking-prep-btn-group">
                   <button className="btn btn-secondary btn-sm" onClick={startPrepTimer} disabled={isPrepActive || prepTimeLeft === 0}>
-                    {isPrepActive ? '⏳ Đang chuẩn bị' : '🏁 Bắt đầu 1 phút chuẩn bị'}
+                    {isPrepActive ? '⏳ Preparing' : '🏁 Start 1 Min Preparation'}
                   </button>
                   <button className="btn btn-secondary btn-sm" onClick={resetPrepTimer}>
                     Reset
@@ -338,14 +338,14 @@ export default function SpeakingPracticePage() {
                   <div className="record-badge pulse">🔴 RECORDING</div>
                   <div className="speaking-record-status">{formatTime(recordingSeconds)}</div>
                   <button className="btn btn-danger" onClick={stopRecording} style={{ width: '100%', maxWidth: 200 }}>
-                    ⏹️ Dừng ghi âm
+                    ⏹️ Stop Recording
                   </button>
                 </>
               ) : (
                 <>
                   <div style={{ fontSize: '3rem' }}>🎙️</div>
                   <button className="btn btn-primary" onClick={startRecording} disabled={isSubmitted} style={{ width: '100%', maxWidth: 240 }}>
-                    🎤 Bắt đầu ghi âm Part {activePartIndex + 1}
+                    🎤 Start Recording Part {activePartIndex + 1}
                   </button>
                 </>
               )}
@@ -353,7 +353,7 @@ export default function SpeakingPracticePage() {
               {/* Playback player if recording exists */}
               {recordings[activePartIndex + 1] && (
                 <div className="speaking-playback-container">
-                  <div className="speaking-playback-title">✓ Đã ghi âm thành công. Nghe lại:</div>
+                  <div className="speaking-playback-title">✓ Recording saved. Playback:</div>
                   <audio src={recordings[activePartIndex + 1]} controls className="speaking-playback-audio" />
                 </div>
               )}
@@ -363,13 +363,13 @@ export default function SpeakingPracticePage() {
             {isSubmitted && (
               <div className="card speaking-tips-card">
                 <h4 className="speaking-tips-title">
-                  💡 Tiêu chí đánh giá & Hướng dẫn tự ôn luyện
+                  💡 Assessment Criteria & Self-Practice Guide
                 </h4>
                 <ul className="speaking-tips-list">
-                  <li><strong>Fluency & Coherence:</strong> Nói mạch lạc, lưu loát, không ngắt quãng quá lâu. Sử dụng các từ nối tự nhiên.</li>
-                  <li><strong>Lexical Resource:</strong> Sử dụng vốn từ đa dạng, đúng ngữ cảnh, kết hợp collocation hợp lý.</li>
-                  <li><strong>Grammatical Range & Accuracy:</strong> Phối hợp nhiều cấu trúc ngữ pháp (câu phức, câu điều kiện) chuẩn xác.</li>
-                  <li><strong>Pronunciation:</strong> Phát âm từ rõ ràng, đúng trọng âm, ngữ điệu tự nhiên dễ hiểu.</li>
+                  <li><strong>Fluency & Coherence:</strong> Speak coherently and fluently without long pauses. Use natural discourse markers.</li>
+                  <li><strong>Lexical Resource:</strong> Use a wide range of vocabulary appropriately and combine collocations naturally.</li>
+                  <li><strong>Grammatical Range & Accuracy:</strong> Use a variety of grammatical structures (complex sentences, conditionals) accurately.</li>
+                  <li><strong>Pronunciation:</strong> Pronounce words clearly, with correct word stress and natural intonation.</li>
                 </ul>
               </div>
             )}
@@ -388,7 +388,7 @@ export default function SpeakingPracticePage() {
         bandScore="Saved"
         onClose={() => setShowResult(false)}
         backUrl={`/tests/${book}/${test}`}
-        customMessage="File ghi âm câu trả lời Speaking của bạn đã được ghi nhận và lưu trữ trong hệ thống thành công! Bạn có thể nghe lại các bài nói của mình bằng cách chuyển đổi giữa các tab Part 1, 2, 3 và nghe file phát lại."
+        customMessage="Your Speaking response recording has been successfully saved to the system! You can listen to your recordings by switching between the Part 1, 2, and 3 tabs and playing the audio."
       />
     </div>
   )

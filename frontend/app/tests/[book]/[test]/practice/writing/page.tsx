@@ -183,7 +183,7 @@ export default function WritingPracticePage() {
       <div className="container fade-in" style={{ textAlign: 'center', paddingTop: 60 }}>
         <div style={{ fontSize: '2rem', marginBottom: 16 }}>✍️</div>
         <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>Loading Writing Test...</div>
-        <div style={{ color: 'var(--text-muted)', marginTop: 8 }}>Đang tải đề thi viết</div>
+        <div style={{ color: 'var(--text-muted)', marginTop: 8 }}>Loading writing test...</div>
       </div>
     )
   }
@@ -192,9 +192,9 @@ export default function WritingPracticePage() {
     return (
       <div className="container">
         <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-          <p>❌ Không thể tải nội dung bài thi Writing.</p>
+          <p>❌ Failed to load Writing test content.</p>
           <Link href={`/tests/${book}/${test}`}>
-            <button className="btn btn-primary" style={{ marginTop: 16 }}>Quay lại</button>
+            <button className="btn btn-primary" style={{ marginTop: 16 }}>Back</button>
           </Link>
         </div>
       </div>
@@ -224,7 +224,7 @@ export default function WritingPracticePage() {
           </div>
           {!isSubmitted && (
             <button className="btn btn-submit btn-sm" onClick={handleSubmit}>
-              Nộp bài
+              Submit
             </button>
           )}
         </div>
@@ -239,7 +239,7 @@ export default function WritingPracticePage() {
               className={`section-tab ${viewMode === 'prompt' ? 'section-tab--active' : ''}`}
               onClick={() => setViewMode('prompt')}
             >
-              📄 Đề bài (Writing Prompt)
+              📄 Writing Prompt
             </button>
             {isSubmitted && (
               <button
@@ -247,7 +247,7 @@ export default function WritingPracticePage() {
                 onClick={() => setViewMode('model')}
                 style={{ borderLeft: '1px solid var(--border-light)' }}
               >
-                🎓 Bài viết mẫu (Model Answer)
+                🎓 Model Answer
               </button>
             )}
           </div>
@@ -279,10 +279,10 @@ export default function WritingPracticePage() {
           <div className="writing-editor-container">
             <div className="writing-editor-header">
               <h3 className="writing-editor-title">
-                Nhập bài viết của bạn cho Task {activeTaskIndex + 1}
+                Type your essay for Task {activeTaskIndex + 1}
               </h3>
               <div className={`writing-word-count-badge ${isWordCountMet ? 'writing-word-count-badge--complete' : 'writing-word-count-badge--incomplete'}`}>
-                ✍️ {currentWordCount} / {minWords} từ
+                ✍️ {currentWordCount} / {minWords} words
               </div>
             </div>
 
@@ -298,10 +298,10 @@ export default function WritingPracticePage() {
             {isSubmitted && (
               <div className="card writing-model-answer-info-card">
                 <h4 className="writing-model-answer-info-card__title">
-                  💡 Bài viết mẫu chính thức của Cambridge
+                  💡 Official Cambridge Model Answer
                 </h4>
                 <p className="writing-model-answer-info-card__desc">
-                  Hãy click vào tab <strong>"Bài viết mẫu (Model Answer)"</strong> bên trái để so sánh bài viết của bạn với bài viết mẫu đạt chuẩn và xem nhận xét chi tiết của giám khảo chấm thi Cambridge.
+                  Click on the <strong>"Model Answer"</strong> tab on the left to compare your essay with the official model answer and read the detailed examiner comments.
                 </p>
               </div>
             )}
@@ -320,7 +320,7 @@ export default function WritingPracticePage() {
         bandScore="Saved"
         onClose={() => setShowResult(false)}
         backUrl={`/tests/${book}/${test}`}
-        customMessage="Bài viết Writing Task 1 & Task 2 của bạn đã được lưu lại thành công! Bạn có thể xem các bài viết mẫu (Model Answers) của Cambridge để tự so sánh và đánh giá bài làm của mình."
+        customMessage="Your Writing Task 1 & Task 2 essays have been successfully saved! You can view the Cambridge Model Answers on the left to compare and self-evaluate your work."
       />
     </div>
   )

@@ -347,7 +347,7 @@ export default function ReadingPracticePage() {
       <div className="container fade-in" style={{ textAlign: 'center', paddingTop: 60 }}>
         <div style={{ fontSize: '2rem', marginBottom: 16 }}>📖</div>
         <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>Loading Reading Test...</div>
-        <div style={{ color: 'var(--text-muted)', marginTop: 8 }}>Đang tải nội dung bài thi</div>
+        <div style={{ color: 'var(--text-muted)', marginTop: 8 }}>Preparing reading passages and questions...</div>
       </div>
     )
   }
@@ -356,9 +356,9 @@ export default function ReadingPracticePage() {
     return (
       <div className="container">
         <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-          <p>❌ Không thể tải nội dung bài thi.</p>
+          <p>❌ Unable to load test content.</p>
           <Link href={`/tests/${book}/${test}`}>
-            <button className="btn btn-primary" style={{ marginTop: 16 }}>Quay lại</button>
+            <button className="btn btn-primary" style={{ marginTop: 16 }}>Back</button>
           </Link>
         </div>
       </div>
@@ -377,7 +377,7 @@ export default function ReadingPracticePage() {
           <span className="exam-bar__badge">Reading</span>
           <span>Cambridge IELTS {book} — Test {test}</span>
           <span className="reading-answered-badge">
-            {answeredCount}/40 đã trả lời
+            {answeredCount}/40 answered
           </span>
         </div>
         <div className="reading-timer-wrapper">
@@ -386,7 +386,7 @@ export default function ReadingPracticePage() {
           </div>
           {!isSubmitted && (
             <button className="btn btn-submit btn-sm" onClick={handleSubmit}>
-              Nộp bài
+              Submit
             </button>
           )}
         </div>
@@ -478,7 +478,7 @@ export default function ReadingPracticePage() {
                   className={`section-tab ${activeGroupIndex === idx ? 'section-tab--active' : ''}`}
                   onClick={() => setActiveGroupIndex(idx)}
                 >
-                  {group.range === 'all' ? 'Tất cả' : `Câu ${group.range}`}
+                  {group.range === 'all' ? 'All' : `Qs ${group.range}`}
                 </button>
               ))}
             </div>
@@ -497,7 +497,7 @@ export default function ReadingPracticePage() {
             {/* Answer Inputs */}
             <div className="card reading-answer-section">
               <h3 className="reading-answer-title">
-                Nhập đáp án — Nhóm {activeGroup?.range === 'all' ? 'Tất cả' : activeGroup?.range}
+                Enter answers — Group {activeGroup?.range === 'all' ? 'All' : activeGroup?.range}
               </h3>
               <div className="reading-answer-grid">
                 {getQuestionRange(activeGroup?.range ?? currentPassage.question_range).map(q => {
@@ -537,7 +537,7 @@ export default function ReadingPracticePage() {
             {isSubmitted && answerKey && (
               <div className="card reading-explanations-section">
                 <h4 className="reading-explanations-title">
-                  📝 Giải thích đáp án
+                  📝 Answer Explanations
                 </h4>
                 <div className="reading-explanations-grid">
                   {getQuestionRange(activeGroup?.range ?? currentPassage.question_range).map(q => {
@@ -549,7 +549,7 @@ export default function ReadingPracticePage() {
                       <div key={q} className="reading-explanation-card" style={{
                         borderLeft: `3px solid ${isCorrect ? 'var(--status-correct)' : 'var(--status-wrong)'}`,
                       }}>
-                        <strong style={{ color: isCorrect ? 'var(--status-correct)' : 'var(--status-wrong)' }}>Câu {q}:</strong>{' '}
+                        <strong style={{ color: isCorrect ? 'var(--status-correct)' : 'var(--status-wrong)' }}>Question {q}:</strong>{' '}
                         <span style={{ color: 'var(--status-correct)', fontWeight: 600 }}>{dispAnswer}</span>
                         <br />
                         <span style={{ color: 'var(--text-secondary)' }}>{ak.explanation}</span>

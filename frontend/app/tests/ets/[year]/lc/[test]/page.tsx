@@ -246,8 +246,8 @@ export default function ETSListeningPracticePage() {
     return (
       <div className="container fade-in" style={{ textAlign: 'center', paddingTop: 80 }}>
         <div style={{ fontSize: '2.5rem', marginBottom: 16 }}>🎧</div>
-        <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>Đang tải đề thi TOEIC Listening...</div>
-        <div style={{ color: 'var(--text-muted)', marginTop: 8 }}>Đang chuẩn bị tệp âm thanh và tài liệu</div>
+        <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>Loading TOEIC Listening Test...</div>
+        <div style={{ color: 'var(--text-muted)', marginTop: 8 }}>Preparing audio files and materials...</div>
       </div>
     )
   }
@@ -258,9 +258,9 @@ export default function ETSListeningPracticePage() {
       <div className="exam-bar">
         <div className="exam-bar__info">
           <span className="exam-bar__badge" style={{ background: '#3b82f6' }}>TOEIC LC</span>
-          <span>ETS {year} — Đề thi {test}</span>
+          <span>ETS {year} — Test {test}</span>
           <span className="listening-answered-badge">
-            {answeredCount}/100 đã làm
+            {answeredCount}/100 completed
           </span>
         </div>
         <div className="listening-timer-wrapper">
@@ -269,7 +269,7 @@ export default function ETSListeningPracticePage() {
           </div>
           {!isSubmitted && (
             <button className="btn btn-submit btn-sm" onClick={handleSubmit}>
-              Nộp bài
+              Submit
             </button>
           )}
         </div>
@@ -300,7 +300,7 @@ export default function ETSListeningPracticePage() {
                 onClick={() => setActivePart(part)}
                 style={{ textTransform: 'capitalize' }}
               >
-                {part === 'all' ? 'Tất cả' : part.replace('part', 'Part ')}
+                {part === 'all' ? 'All' : part.replace('part', 'Part ')}
               </button>
             ))}
           </div>
@@ -308,10 +308,10 @@ export default function ETSListeningPracticePage() {
           {/* Persistent Mini Audio Player */}
           <div className="ets-audio-bar">
             <div className="ets-audio-bar__header">
-              <span>🔊 Trình phát âm thanh câu hỏi</span>
+              <span>🔊 Question Audio Player</span>
               {currentAudio && (
                 <span style={{ color: '#2563eb', fontWeight: 600 }}>
-                  Đang phát: {currentAudio}
+                  Playing: {currentAudio}
                 </span>
               )}
             </div>
@@ -326,8 +326,8 @@ export default function ETSListeningPracticePage() {
           {/* Answer Inputs Grid */}
           <div className="card" style={{ padding: '12px' }}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Phiếu trả lời trắc nghiệm</span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>* Part 2 gồm 3 đáp án (A-B-C)</span>
+              <span>Answer Sheet</span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>* Part 2 has 3 choices (A-B-C)</span>
             </h3>
 
             <div className="ets-q-grid">
@@ -350,7 +350,7 @@ export default function ETSListeningPracticePage() {
                   }}>
                     <div className="ets-q-card__header">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span className="ets-q-card__num">Câu {q}</span>
+                        <span className="ets-q-card__num">Question {q}</span>
                         <span className="part-badge">{getQuestionPartName(q)}</span>
                       </div>
                       
@@ -359,7 +359,7 @@ export default function ETSListeningPracticePage() {
                           className={`ets-q-card__audio-btn ${playingQuestion === q ? 'ets-q-card__audio-btn--playing' : ''}`}
                           onClick={() => handlePlayAudio(q)}
                         >
-                          {playingQuestion === q ? '⏸️ Tạm dừng' : '▶️ Nghe'}
+                          {playingQuestion === q ? '⏸️ Pause' : '▶️ Listen'}
                         </button>
                       )}
                     </div>
@@ -413,13 +413,13 @@ export default function ETSListeningPracticePage() {
       <ResultModal
         isOpen={showResult}
         emoji="🎯"
-        title="Kết quả TOEIC Listening"
+        title="TOEIC Listening Result"
         testNumber={test}
         correctCount={correctCount}
         totalCount={100}
-        bandScore={Object.keys(answerKey).length > 0 ? `${correctCount * 5}/495` : 'Đã nộp bài!'}
+        bandScore={Object.keys(answerKey).length > 0 ? `${correctCount * 5}/495` : 'Submitted!'}
         onClose={() => setShowResult(false)}
-        backUrl="/"
+        backUrl="/tests?type=toeic"
       />
     </div>
   )

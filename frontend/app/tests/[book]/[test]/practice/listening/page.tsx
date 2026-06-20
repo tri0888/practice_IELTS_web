@@ -248,7 +248,7 @@ export default function ListeningPracticePage() {
       <div className="container fade-in" style={{ textAlign: 'center', paddingTop: 60 }}>
         <div style={{ fontSize: '2rem', marginBottom: 16 }}>🎧</div>
         <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>Loading Listening Test...</div>
-        <div style={{ color: 'var(--text-muted)', marginTop: 8 }}>Đang tải nội dung bài thi</div>
+        <div style={{ color: 'var(--text-muted)', marginTop: 8 }}>Preparing listening section audio and materials</div>
       </div>
     )
   }
@@ -257,9 +257,9 @@ export default function ListeningPracticePage() {
     return (
       <div className="container">
         <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-          <p>❌ Không thể tải nội dung bài thi này.</p>
+          <p>❌ Unable to load test content.</p>
           <Link href={`/tests/${book}/${test}`}>
-            <button className="btn btn-primary" style={{ marginTop: 16 }}>Quay lại</button>
+            <button className="btn btn-primary" style={{ marginTop: 16 }}>Back</button>
           </Link>
         </div>
       </div>
@@ -276,7 +276,7 @@ export default function ListeningPracticePage() {
           <span className="exam-bar__badge">Listening</span>
           <span>Cambridge IELTS {book} — Test {test}</span>
           <span className="listening-answered-badge">
-            {answeredCount}/40 đã trả lời
+            {answeredCount}/40 answered
           </span>
         </div>
         <div className="listening-timer-wrapper">
@@ -285,7 +285,7 @@ export default function ListeningPracticePage() {
           </div>
           {!isSubmitted && (
             <button className="btn btn-submit btn-sm" onClick={handleSubmit}>
-              Nộp bài
+              Submit
             </button>
           )}
         </div>
@@ -329,7 +329,7 @@ export default function ListeningPracticePage() {
           {/* Answer Input Grid */}
           <div className="card listening-answer-section">
             <h3 className="listening-answer-title">
-              Nhập đáp án — Section {sections[activeSection].section_number}
+              Enter answers — Section {sections[activeSection].section_number}
             </h3>
             <div className="listening-answer-grid">
               {getQuestionRange(sections[activeSection].question_range).map(q => {
@@ -368,7 +368,7 @@ export default function ListeningPracticePage() {
           {/* Question Palette */}
           <div className="card">
             <h4 className="listening-palette-title">
-              Question Palette (Bảng câu hỏi)
+              Question Palette
             </h4>
             <div className="question-palette" style={{ boxShadow: 'none', padding: 0 }}>
               {Array.from({ length: 40 }, (_, i) => i + 1).map(q => {
@@ -397,15 +397,15 @@ export default function ListeningPracticePage() {
             <div className="listening-legend-container">
               <div className="listening-legend-item">
                 <div className="listening-legend-dot" style={{ background: 'var(--accent-blue)' }} />
-                Đã trả lời
+                Answered
               </div>
               <div className="listening-legend-item">
                 <div className="listening-legend-dot" style={{ border: '2px solid var(--ielts-red)' }} />
-                Section hiện tại
+                Current Section
               </div>
               <div className="listening-legend-item">
                 <div className="listening-legend-dot" style={{ border: '2px solid var(--border-light)' }} />
-                Chưa trả lời
+                Unanswered
               </div>
             </div>
           </div>
@@ -414,7 +414,7 @@ export default function ListeningPracticePage() {
           {isSubmitted && answerKey && (
             <div className="card listening-explanations-section">
               <h4 className="listening-explanations-title">
-                📝 Giải thích đáp án — Section {sections[activeSection].section_number}
+                📝 Answer Explanations — Section {sections[activeSection].section_number}
               </h4>
               <div className="listening-explanations-grid">
                 {getQuestionRange(sections[activeSection].question_range).map(q => {
@@ -427,7 +427,7 @@ export default function ListeningPracticePage() {
                       borderLeft: `3px solid ${isCorrect ? 'var(--status-correct)' : 'var(--status-wrong)'}`,
                     }}>
                       <strong style={{ color: isCorrect ? 'var(--status-correct)' : 'var(--status-wrong)' }}>
-                        Câu {q}:
+                        Question {q}:
                       </strong>{' '}
                       <span style={{ color: 'var(--status-correct)', fontWeight: 600 }}>{dispAnswer}</span>
                       <br />

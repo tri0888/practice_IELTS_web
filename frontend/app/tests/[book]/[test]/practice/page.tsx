@@ -12,14 +12,14 @@ export default function PracticeHubPage() {
     <div className="container fade-in">
       {/* Breadcrumb */}
       <div className="practice-hub-breadcrumb">
-        <Link href="/">Test Library</Link>
+        <Link href="/tests">Practice Tests</Link>
         <span className="practice-hub-breadcrumb-sep">›</span>
         <Link href={`/tests/${book}/${test}`}>Test {test}</Link>
         <span className="practice-hub-breadcrumb-sep">›</span>
-        <span className="practice-hub-breadcrumb-active">Chọn kỹ năng</span>
+        <span className="practice-hub-breadcrumb-active">Select Skill</span>
       </div>
 
-      <h1 className="page-title">Chọn kỹ năng luyện tập</h1>
+      <h1 className="page-title">Select Practice Skill</h1>
       <p className="page-subtitle">Cambridge IELTS {book} — Test {test}</p>
 
       <div className="practice-hub-grid">
@@ -29,9 +29,9 @@ export default function PracticeHubPage() {
             <div className="practice-hub-card__emoji">🎧</div>
             <h3 className="practice-hub-card__title">Listening</h3>
             <p className="practice-hub-card__desc">
-              40 câu hỏi • 30 phút • 4 sections
+              40 Questions • 30 mins • 4 Sections
             </p>
-            <div className="btn btn-primary" style={{ width: '100%' }}>Bắt đầu</div>
+            <div className="btn btn-primary" style={{ width: '100%' }}>Start</div>
           </div>
         </Link>
 
@@ -42,9 +42,9 @@ export default function PracticeHubPage() {
             <div className="practice-hub-card__emoji">📖</div>
             <h3 className="practice-hub-card__title">Reading</h3>
             <p className="practice-hub-card__desc">
-              40 câu hỏi • 60 phút • 3 passages
+              40 Questions • 60 mins • 3 Passages
             </p>
-            <div className="btn btn-primary" style={{ width: '100%' }}>Bắt đầu</div>
+            <div className="btn btn-primary" style={{ width: '100%' }}>Start</div>
           </div>
         </Link>
 
@@ -54,9 +54,9 @@ export default function PracticeHubPage() {
             <div className="practice-hub-card__emoji">✍️</div>
             <h3 className="practice-hub-card__title">Writing</h3>
             <p className="practice-hub-card__desc">
-              2 tasks • 60 phút
+              2 Tasks • 60 mins
             </p>
-            <div className="btn btn-primary" style={{ width: '100%' }}>Bắt đầu</div>
+            <div className="btn btn-primary" style={{ width: '100%' }}>Start</div>
           </div>
         </Link>
 
@@ -66,9 +66,9 @@ export default function PracticeHubPage() {
             <div className="practice-hub-card__emoji">🎙️</div>
             <h3 className="practice-hub-card__title">Speaking</h3>
             <p className="practice-hub-card__desc">
-              3 parts • 11-14 phút
+              3 Parts • 11-14 mins
             </p>
-            <div className="btn btn-primary" style={{ width: '100%' }}>Bắt đầu</div>
+            <div className="btn btn-primary" style={{ width: '100%' }}>Start</div>
           </div>
         </Link>
       </div>

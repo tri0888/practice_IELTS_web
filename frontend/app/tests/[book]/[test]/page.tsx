@@ -17,10 +17,10 @@ type SkillInfo = {
 }
 
 const SKILLS: SkillInfo[] = [
-  { key: 'listening', label: 'Listening', emoji: '🎧', duration: '30 phút', questions: 40, color: '#3b82f6', available: true },
-  { key: 'reading', label: 'Reading', emoji: '📖', duration: '60 phút', questions: 40, color: '#22c55e', available: true },
-  { key: 'writing', label: 'Writing', emoji: '✍️', duration: '60 phút', questions: 2, color: '#f59e0b', available: true },
-  { key: 'speaking', label: 'Speaking', emoji: '🎙️', duration: '11-14 phút', questions: 3, color: '#8b5cf6', available: true },
+  { key: 'listening', label: 'Listening', emoji: '🎧', duration: '30 mins', questions: 40, color: '#3b82f6', available: true },
+  { key: 'reading', label: 'Reading', emoji: '📖', duration: '60 mins', questions: 40, color: '#22c55e', available: true },
+  { key: 'writing', label: 'Writing', emoji: '✍️', duration: '60 mins', questions: 2, color: '#f59e0b', available: true },
+  { key: 'speaking', label: 'Speaking', emoji: '🎙️', duration: '11-14 mins', questions: 3, color: '#8b5cf6', available: true },
 ]
 
 export default function TestDetailPage() {
@@ -50,7 +50,7 @@ export default function TestDetailPage() {
     <div className="container fade-in">
       {/* Breadcrumb */}
       <div className="breadcrumb">
-        <Link href="/">Test Library</Link>
+        <Link href="/tests">Practice Tests</Link>
         <span className="breadcrumb-sep">›</span>
         <span className="breadcrumb-active">Cambridge IELTS {book} — Test {test}</span>
       </div>
@@ -67,24 +67,24 @@ export default function TestDetailPage() {
           <div key={skill.key} className={`card skill-card ${!skill.available ? 'skill-card--unavailable' : ''}`}>
             {!skill.available && (
               <div className="badge-upcoming">
-                Phase 1c
+                Upcoming
               </div>
             )}
             <div className="skill-emoji">{skill.emoji}</div>
             <h3 className="skill-title">{skill.label}</h3>
             <div className="skill-stats">
               <span>⏱️ {skill.duration}</span>
-              <span>📝 {skill.questions} câu</span>
+              <span>📝 {skill.questions} Qs</span>
             </div>
             {skill.available ? (
               <Link href={`/tests/${book}/${test}/practice/${skill.key}`}>
                 <button className="btn btn-primary" style={{ width: '100%' }}>
-                  Bắt đầu luyện tập
+                  Start Practice
                 </button>
               </Link>
             ) : (
               <button className="btn btn-secondary" style={{ width: '100%' }} disabled>
-                Sắp ra mắt
+                Coming Soon
               </button>
             )}
           </div>
