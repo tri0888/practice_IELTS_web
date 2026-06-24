@@ -23,8 +23,8 @@ function SidebarMenu() {
   return (
     <nav className="sidebar-menu">
       <Link 
-        href="/" 
-        className={`sidebar-menu-btn ${pathname === '/' ? 'active' : ''}`}
+        href="/Home" 
+        className={`sidebar-menu-btn ${pathname === '/Home' ? 'active' : ''}`}
         style={{ textDecoration: 'none' }}
       >
         <span className="sidebar-menu-icon">📊</span>
@@ -75,13 +75,13 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   // Determine if sidebar should be shown
   const isPracticePage = pathname.includes('/practice') || pathname.includes('/ets/')
-  const showSidebar = !isPracticePage && (pathname === '/' || pathname.startsWith('/tests') || pathname.startsWith('/history'))
+  const showSidebar = !isPracticePage && (pathname === '/Home' || pathname.startsWith('/tests') || pathname.startsWith('/history'))
 
   return (
     <div className="app-layout-wrapper">
       {/* Header Navbar */}
       <header className="ielts-header">
-        <Link href="/" style={{ color: 'inherit', textDecoration: 'none' }}>
+        <Link href="/Home" style={{ color: 'inherit', textDecoration: 'none' }}>
           <div className="ielts-header__logo">
             <div className="ielts-header__logo-icon">Hub</div>
             <span>Practice Hub</span>

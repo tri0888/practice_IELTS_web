@@ -178,7 +178,7 @@ export default function HistoryPage() {
       {/* Sidebar List */}
       <div className="history-list-panel">
         <div className="history-list-header">
-          <Link href="/" className="btn-back-home">
+          <Link href="/Home" className="btn-back-home">
             ← Home
           </Link>
           <h2 className="history-title">📜 Test History</h2>
