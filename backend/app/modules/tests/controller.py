@@ -37,6 +37,12 @@ def get_ets_answers(pdf_type: str, test_number: int, year: str = "2026"):
 def get_pdf_page_count(book: int, pdf_type: str = "academic"):
     return services.get_pdf_page_count(book, pdf_type)
 
+@router.get("/{book}/pdf")
+def get_book_pdf(book: int, pdf_type: str = "academic"):
+    path = services.find_book_pdf_path(book, pdf_type)
+    headers = {"Content-Disposition": f"inline; filename=\"{path.name}\""}
+    return FileResponse(path=path, media_type="application/pdf", headers=headers)
+
 @router.get("/{book}/{test}")
 def get_test(book: int, test: int):
     return services.get_test(book, test)
@@ -48,6 +54,5 @@ def get_test_audio(book: int, test: int):
 @router.get("/{book}/{test}/{skill}")
 def get_skill(book: int, test: int, skill: str):
     return services.get_skill(book, test, skill)
-
 
 

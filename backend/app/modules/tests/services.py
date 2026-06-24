@@ -3,7 +3,6 @@ from pathlib import Path
 import fitz  # PyMuPDF
 from fastapi import HTTPException
 from app.models import database as db
-from app import seeder
 
 def find_book_pdf_path(book: int, pdf_type: str = "academic") -> Path:
     repo_root = Path(__file__).resolve().parents[4]
@@ -26,8 +25,9 @@ def find_book_pdf_path(book: int, pdf_type: str = "academic") -> Path:
 def list_tests():
     if db.is_available():
         coll = db.tests_collection()
-        return list(coll.find({}, {"book": 1, "test_number": 1, "sections": 1, "_id": 0}))
-    return seeder.get_tests_list(seeder.get_seed_data())
+        if coll is not None:
+            return list(coll.find({}, {"book": 1, "test_number": 1, "sections": 1, "_id": 0}))
+    return []
 
 def get_pdf_page_count(book: int, pdf_type: str = "academic"):
     try:
@@ -42,20 +42,18 @@ def get_pdf_page_count(book: int, pdf_type: str = "academic"):
 def get_test(book: int, test: int):
     if db.is_available():
         coll = db.tests_collection()
-        doc = coll.find_one({"book": book, "test_number": test}, {"_id": 0})
-        if not doc:
-            raise HTTPException(status_code=404, detail="test not found in DB")
-        return doc
-    t = seeder.find_test(seeder.get_seed_data(), book, test)
-    if not t:
-        raise HTTPException(status_code=404, detail="test not found")
-    return t
+        if coll is not None:
+            doc = coll.find_one({"book": book, "test_number": test}, {"_id": 0})
+            if doc:
+                return doc
+    raise HTTPException(status_code=404, detail="test not found")
 
 def get_test_audio(book: int, test: int):
     if db.is_available():
         coll = db.audio_collection()
-        return list(coll.find({"book": book, "test_number": test}, {"_id": 0}))
-    return seeder.collect_audio_assets(seeder.get_seed_data(), book, test)
+        if coll is not None:
+            return list(coll.find({"book": book, "test_number": test}, {"_id": 0}))
+    return []
 
 def get_skill(book: int, test: int, skill: str):
     t = get_test(book, test)

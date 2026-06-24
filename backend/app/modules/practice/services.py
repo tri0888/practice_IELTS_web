@@ -4,7 +4,6 @@ from functools import lru_cache
 import fitz  # PyMuPDF
 from fastapi import HTTPException
 from app.models import database as db
-from app import seeder
 from app.modules.tests.services import find_book_pdf_path
 
 @lru_cache(maxsize=1)
@@ -43,27 +42,7 @@ def get_test_answers_dict(book: int, test: int, skill: str = None) -> dict:
                     return doc[skill]
                 elif "answers" in doc:
                     return doc["answers"]
-                
-    t = seeder.find_test(seeder.get_seed_data(), book, test)
-    if not t:
-        return {}
-    answers = {}
-    for section in t.get("sections", []):
-        if skill:
-            name = section.get("name", "").lower()
-            is_sec_reading = name.startswith("passage") or name.startswith("reading")
-            is_sec_listening = name.startswith("section") or name.startswith("listening")
-            if skill == "reading" and not is_sec_reading:
-                continue
-            if skill == "listening" and not is_sec_listening:
-                continue
-                
-        for row in section.get("rows", []):
-            answers[str(row["question_number"])] = {
-                "answer": row.get("answer_text", ""),
-                "explanation": row.get("explanation_text", ""),
-            }
-    return answers
+    return {}
 
 @lru_cache(maxsize=128)
 def get_pdf_page_bytes(book: int, page_number: int, pdf_type: str = "academic") -> bytes:

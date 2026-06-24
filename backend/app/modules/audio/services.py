@@ -1,15 +1,35 @@
 from pathlib import Path
 from fastapi import HTTPException
-from app import seeder
 
 def stream_audio(file_name: str):
-    matches = [a for a in seeder.get_seed_data().get("audio_assets", []) if a.get("file_name") == file_name]
-    if not matches:
-        raise HTTPException(status_code=404, detail="audio not found")
-    relative_path = matches[0].get("relative_path")
-    if not relative_path:
-        raise HTTPException(status_code=404, detail="audio path not found")
+    from app.models import database as db
+    relative_path = None
+    if db.is_available():
+        coll = db.audio_collection()
+        if coll is not None:
+            doc = coll.find_one({"file_name": file_name})
+            if doc:
+                relative_path = doc.get("relative_path")
+                
     repo_root = Path(__file__).resolve().parents[4]
+    
+    if not relative_path:
+        # Fallback: scan Books directory for this file_name
+        books_dir = repo_root / "Books"
+        if books_dir.exists():
+            for p in books_dir.glob("**/Audio/*.mp3"):
+                if p.name == file_name:
+                    relative_path = p.relative_to(repo_root).as_posix()
+                    break
+            if not relative_path:
+                for p in books_dir.glob("**/*.mp3"):
+                    if p.name == file_name:
+                        relative_path = p.relative_to(repo_root).as_posix()
+                        break
+                        
+    if not relative_path:
+        raise HTTPException(status_code=404, detail="audio not found")
+        
     audio_path = repo_root / relative_path
     if not audio_path.exists():
         raise HTTPException(status_code=404, detail="audio file missing")

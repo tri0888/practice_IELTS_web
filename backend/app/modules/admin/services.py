@@ -2,7 +2,6 @@ import re
 import fitz  # PyMuPDF
 from fastapi import HTTPException
 from app.models import database as db
-from app import seeder
 from app.modules.tests.services import find_book_pdf_path
 from app.modules.practice.services import get_practice_layout_dict, get_test_answers_dict, get_pdf_part_bytes
 
@@ -14,8 +13,6 @@ def admin_get_test_info(book: int, test: int):
         coll = db.audio_collection()
         if coll is not None:
             audio = list(coll.find({"book": book, "test_number": test}, {"_id": 0}))
-    if not audio:
-        audio = seeder.collect_audio_assets(seeder.get_seed_data(), book, test)
     return {
         "book": book,
         "test": test,

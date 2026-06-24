@@ -1,8 +1,13 @@
 import os
 from pymongo import MongoClient, errors
+from dotenv import load_dotenv
 
-MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
-DB_NAME = os.getenv("MONGODB_DB", "ielts_platform_dev")
+# Load environment variables from .env
+load_dotenv()
+
+MONGODB_URI = os.getenv("MONGODB_URI")
+print(f"MONGODB_URI: {MONGODB_URI}")
+DB_NAME = os.getenv("DB_NAME", "ielts_platform_dev")
 
 def get_client():
     try:

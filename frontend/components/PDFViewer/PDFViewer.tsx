@@ -16,33 +16,16 @@ const BACKEND = '/api'
 export default function PDFViewer({ pages, containerRef, style, book, pdfType, partKey, test }: PDFViewerProps) {
   const bookVal = book ?? '11'
   const typeVal = pdfType ?? 'academic'
-
-  if (partKey && test) {
-    return (
-      <div className="pdf-viewer-container" ref={containerRef} style={style}>
-        <div className="pdf-page-card">
-          <img
-            src={`${BACKEND}/pdf-parts/${bookVal}/${typeVal}/${test}/${partKey}.png`}
-            alt={partKey}
-            className="pdf-page-img"
-          />
-        </div>
-      </div>
-    )
-  }
+  const targetPage = pages && pages.length > 0 ? pages[0] : 1
 
   return (
     <div className="pdf-viewer-container" ref={containerRef} style={style}>
-      {pages.map((pageNumber) => (
-        <div key={pageNumber} className="pdf-page-card">
-          <img
-            src={`${BACKEND}/pdf-pages/${bookVal}/${typeVal}/${pageNumber}.png`}
-            alt={`Page ${pageNumber}`}
-            className="pdf-page-img"
-          />
-          <div className="pdf-page-number">Trang {pageNumber}</div>
-        </div>
-      ))}
+      <iframe
+        key={`${bookVal}-${typeVal}-${targetPage}`}
+        src={`${BACKEND}/tests/${bookVal}/pdf?pdf_type=${typeVal}#page=${targetPage}&toolbar=0`}
+        className="pdf-viewer-iframe"
+        title={`Cambridge ${bookVal} PDF`}
+      />
     </div>
   )
 }

@@ -4,7 +4,6 @@ from datetime import datetime
 from uuid import uuid4
 from fastapi import HTTPException
 from app.models import database as db
-from app import seeder
 from app.models.schemas import AttemptCreate, AttemptSubmit
 from app.modules.practice.services import get_test_answers_dict
 from app.modules.tests.services import get_ets_answers
@@ -74,12 +73,7 @@ def get_result(attempt_id: str):
     if is_reading or is_listening:
         skill_key = "reading" if is_reading else "listening"
         db_answers = get_test_answers_dict(attempt.get("book", 11), attempt["test"], skill=skill_key)
-        if db_answers:
-            correct = db_answers
-        elif is_reading:
-            correct = seeder.collect_reading_answers(seeder.get_seed_data(), attempt.get("book", 11), attempt["test"])
-        else:
-            correct = seeder.collect_listening_answers(seeder.get_seed_data(), attempt.get("book", 11), attempt["test"])
+        correct = db_answers if db_answers else {}
             
         for q in range(1, 41):
             ans = get_correct_answer_for_question(q, correct)
@@ -112,12 +106,7 @@ def _grade_attempt(attempt: dict, responses: list) -> dict:
     if is_reading or is_listening:
         skill_key = "reading" if is_reading else "listening"
         db_answers = get_test_answers_dict(attempt.get("book", 11), attempt["test"], skill=skill_key)
-        if db_answers:
-            correct = db_answers
-        elif is_reading:
-            correct = seeder.collect_reading_answers(seeder.get_seed_data(), attempt.get("book", 11), attempt["test"])
-        else:
-            correct = seeder.collect_listening_answers(seeder.get_seed_data(), attempt.get("book", 11), attempt["test"])
+        correct = db_answers if db_answers else {}
             
         total = 0
         right = 0
