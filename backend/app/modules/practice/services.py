@@ -46,7 +46,7 @@ def get_test_answers_dict(book: int, test: int, skill: str = None) -> dict:
 
 @lru_cache(maxsize=128)
 def get_pdf_page_bytes(book: int, page_number: int, pdf_type: str = "academic") -> bytes:
-    from app.r2_client import get_file_bytes
+    from app.modules.r2_client import get_file_bytes
     try:
         pdf_key = find_book_pdf_path(book, pdf_type)
         pdf_bytes = get_file_bytes(pdf_key)
@@ -96,7 +96,7 @@ def get_pdf_part_bytes(book: int, pdf_type: str, test: int, part_key: str) -> by
     if not pages:
         raise HTTPException(status_code=404, detail=f"Part {part_key} not mapped or found for Book {book} Test {test}")
 
-    from app.r2_client import get_file_bytes
+    from app.modules.r2_client import get_file_bytes
     try:
         pdf_key = find_book_pdf_path(book, pdf_type)
         pdf_bytes = get_file_bytes(pdf_key)

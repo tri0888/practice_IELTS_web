@@ -24,46 +24,50 @@ def start_attempt(a: AttemptCreate):
     attempt_id = str(uuid4())
     attempt["id"] = attempt_id
     
-    if db.is_available():
-        coll = db.attempts_collection()
-        coll.insert_one(attempt)
-    else:
-        in_memory_attempts[attempt_id] = attempt
+    # Store draft attempt temporarily in-memory only (do not write to MongoDB yet)
+    in_memory_attempts[attempt_id] = attempt
         
     return {"id": attempt_id}
 
 def submit_attempt(attempt_id: str, body: AttemptSubmit):
-    # Locate attempt either in DB or in-memory
-    if db.is_available():
-        coll = db.attempts_collection()
-        attempt = coll.find_one({"id": attempt_id})
-        if attempt is None:
-            raise HTTPException(status_code=404, detail="attempt not found")
-            
-        result = _grade_attempt(attempt, body.responses)
-        coll.update_one({"id": attempt_id}, {"$set": {"responses": body.responses, "result": result, "submitted_at": datetime.utcnow().isoformat()}})
-        return {"id": attempt_id, "result": result}
-    else:
-        attempt = in_memory_attempts.get(attempt_id)
+    # Locate attempt first in memory
+    attempt = in_memory_attempts.get(attempt_id)
+    
+    if not attempt:
+        # Fallback to histories collection if it was already submitted
+        if db.is_available():
+            coll = db.histories_collection()
+            attempt = coll.find_one({"id": attempt_id})
         if not attempt:
             raise HTTPException(status_code=404, detail="attempt not found")
             
-        result = _grade_attempt(attempt, body.responses)
-        attempt["responses"] = body.responses
-        attempt["result"] = result
-        attempt["submitted_at"] = datetime.utcnow().isoformat()
-        return {"id": attempt_id, "result": result}
+    result = _grade_attempt(attempt, body.responses)
+    attempt["responses"] = body.responses
+    attempt["result"] = result
+    attempt["submitted_at"] = datetime.utcnow().isoformat()
+    
+    # Save the graded history to MongoDB if available
+    if db.is_available():
+        coll = db.histories_collection()
+        coll.update_one({"id": attempt_id}, {"$set": attempt}, upsert=True)
+        # Pop from in-memory store once saved to DB
+        in_memory_attempts.pop(attempt_id, None)
+    else:
+        in_memory_attempts[attempt_id] = attempt
+        
+    return {"id": attempt_id, "result": result}
 
 def get_result(attempt_id: str):
+    attempt = None
     if db.is_available():
-        coll = db.attempts_collection()
+        coll = db.histories_collection()
         attempt = coll.find_one({"id": attempt_id}, {"_id": 0})
-        if not attempt:
-            raise HTTPException(status_code=404, detail="attempt not found")
-    else:
+        
+    if not attempt:
         attempt = in_memory_attempts.get(attempt_id)
-        if not attempt:
-            raise HTTPException(status_code=404, detail="attempt not found")
+        
+    if not attempt:
+        raise HTTPException(status_code=404, detail="attempt not found")
             
     skill = attempt.get("skill", "").lower()
     is_reading = skill.startswith("passage") or skill == "reading"
@@ -245,23 +249,30 @@ def get_correct_answer_for_question(q: int, correct: dict) -> str:
 
 def list_attempts():
     if db.is_available():
-        coll = db.attempts_collection()
-        # Return all attempts sorted by started_at descending
+        coll = db.histories_collection()
+        # Return all histories sorted by started_at descending
         return list(coll.find({}, {"_id": 0}).sort("started_at", -1))
     else:
-        attempts_list = list(in_memory_attempts.values())
+        # Only return attempts that have been submitted (result is not None)
+        attempts_list = [att for att in in_memory_attempts.values() if att.get("result") is not None]
         attempts_list.sort(key=lambda x: x.get("started_at") or "", reverse=True)
         return attempts_list
 
 def delete_attempt(attempt_id: str):
+    deleted_from_db = False
+    deleted_from_mem = False
+    
     if db.is_available():
-        coll = db.attempts_collection()
+        coll = db.histories_collection()
         res = coll.delete_one({"id": attempt_id})
-        if res.deleted_count == 0:
-            raise HTTPException(status_code=404, detail="attempt not found")
-        return {"status": "ok", "deleted": attempt_id}
-    else:
-        if attempt_id in in_memory_attempts:
-            del in_memory_attempts[attempt_id]
-            return {"status": "ok", "deleted": attempt_id}
+        if res.deleted_count > 0:
+            deleted_from_db = True
+            
+    if attempt_id in in_memory_attempts:
+        del in_memory_attempts[attempt_id]
+        deleted_from_mem = True
+        
+    if not (deleted_from_db or deleted_from_mem):
         raise HTTPException(status_code=404, detail="attempt not found")
+        
+    return {"status": "ok", "deleted": attempt_id}

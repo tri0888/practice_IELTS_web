@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from pathlib import Path
-from app.r2_client import is_local_file, get_local_file_path, get_r2_file_stream, is_r2_enabled
+from app.modules.r2_client import is_local_file, get_local_file_path, get_r2_file_stream, is_r2_enabled
 from . import services
 
 router = APIRouter(prefix="/api/tests", tags=["Tests"])

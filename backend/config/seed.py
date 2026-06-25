@@ -27,7 +27,8 @@ def delete_data():
         "audio_assets": db.audio_collection(),
         "layouts": db.layouts_collection(),
         "answers": db.answers_collection(),
-        "attempts": db.attempts_collection()
+        "histories": db.histories_collection(),
+        "r2_key_cache": db._db["r2_key_cache"] if db.is_available() else None
     }
     
     for name, coll in collections.items():
@@ -268,8 +269,8 @@ def import_data():
     r_layouts = db.layouts_collection().delete_many({'book': 20})
     r_answers = db.answers_collection().delete_many({'book': 20})
     r_audio = db.audio_collection().delete_many({'book': 20})
-    r_attempts = db.attempts_collection().delete_many({'book': 20})
-    print(f"  Cleanup Book 20 documents deleted: {r_tests.deleted_count} tests, {r_layouts.deleted_count} layouts, {r_answers.deleted_count} answers.")
+    r_histories = db.histories_collection().delete_many({'book': 20})
+    print(f"  Cleanup Book 20 documents deleted: {r_tests.deleted_count} tests, {r_layouts.deleted_count} layouts, {r_answers.deleted_count} answers, {r_histories.deleted_count} histories.")
     
     print("\nDatabase sync complete!")
 

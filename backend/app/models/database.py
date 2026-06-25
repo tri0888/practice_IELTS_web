@@ -69,8 +69,8 @@ def is_available() -> bool:
 def tests_collection():
     return _db["tests"] if _db is not None else None
 
-def attempts_collection():
-    return _db["attempts"] if _db is not None else None
+def histories_collection():
+    return _db["histories"] if _db is not None else None
 
 def audio_collection():
     return _db["audio_assets"] if _db is not None else None

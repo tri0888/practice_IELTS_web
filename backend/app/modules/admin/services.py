@@ -54,7 +54,7 @@ def admin_update_audio(book: int, test: int, audio_assets: list):
     return {"status": "ok"}
 
 def extract_answers(book: int, test: int, page_number: int, skill: str):
-    from app.r2_client import get_file_bytes
+    from app.modules.r2_client import get_file_bytes
     try:
         pdf_key = find_book_pdf_path(book, "solution")
         pdf_bytes = get_file_bytes(pdf_key)

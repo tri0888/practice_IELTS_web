@@ -8,7 +8,7 @@ def find_book_pdf_path(book: int, pdf_type: str = "academic") -> str:
     file_suffix = " Solution" if pdf_type == "solution" else ""
     standard_key = f"Cambridge IELTS 11-20/Cam {book}/Cambridge {book}{file_suffix}.pdf"
     
-    from app.r2_client import is_r2_enabled
+    from app.modules.r2_client import is_r2_enabled
     if is_r2_enabled():
         return standard_key
         
@@ -39,7 +39,7 @@ def list_tests():
 
 def get_pdf_page_count(book: int, pdf_type: str = "academic"):
     try:
-        from app.r2_client import get_file_bytes
+        from app.modules.r2_client import get_file_bytes
         pdf_key = find_book_pdf_path(book, pdf_type)
         pdf_bytes = get_file_bytes(pdf_key)
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
@@ -59,14 +59,19 @@ def get_test(book: int, test: int):
             if doc:
                 return doc
     raise HTTPException(status_code=404, detail="test not found")
-
 def get_test_audio(book: int, test: int):
     if db.is_available():
         coll = db.audio_collection()
         if coll is not None:
-            return list(coll.find({"book": book, "test_number": test}, {"_id": 0}))
+            results = list(coll.find({"book": book, "test_number": test}, {"_id": 0}))
+            for doc in results:
+                rel_path = doc.get("relative_path", "")
+                if rel_path.startswith("Books/"):
+                    doc["file_name"] = rel_path[len("Books/"):]
+                elif rel_path:
+                    doc["file_name"] = rel_path
+            return results
     return []
-
 def get_skill(book: int, test: int, skill: str):
     t = get_test(book, test)
     for s in t.get("sections", []):
@@ -82,7 +87,7 @@ def get_ets_pdf_path(pdf_type: str, test_number: int, year: str = "2026") -> str
         f"ETS {year}/ETS-{year}-{pdf_type_upper}/TEST_{test_number:02d}.pdf"
     ]
     
-    from app.r2_client import is_r2_enabled
+    from app.modules.r2_client import is_r2_enabled
     if is_r2_enabled():
         return standard_keys[0]
         
@@ -138,7 +143,7 @@ def get_ets_audio_list(test_number: int, year: str = "2026") -> list[str]:
         files = [f.name for f in audio_dir.glob("*.mp3") if f.is_file()]
         
     if not files:
-        from app.r2_client import get_r2_client, get_r2_bucket, is_r2_enabled
+        from app.modules.r2_client import get_r2_client, get_r2_bucket, is_r2_enabled
         if is_r2_enabled():
             try:
                 client = get_r2_client()
@@ -177,7 +182,7 @@ def get_ets_audio_file_path(test_number: int, file_name: str, year: str = "2026"
         f"ETS {year}/AUDIO/Test {test_number}/{file_name}"
     ]
     
-    from app.r2_client import is_r2_enabled
+    from app.modules.r2_client import is_r2_enabled
     if is_r2_enabled():
         return standard_keys[0]
         
