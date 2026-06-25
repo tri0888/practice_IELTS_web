@@ -46,14 +46,25 @@ def get_test_answers_dict(book: int, test: int, skill: str = None) -> dict:
 
 @lru_cache(maxsize=128)
 def get_pdf_page_bytes(book: int, page_number: int, pdf_type: str = "academic") -> bytes:
-    pdf_path = find_book_pdf_path(book, pdf_type)
-    doc = fitz.open(str(pdf_path))
-    page_num_actual = min(max(1, page_number), len(doc))
-    page = doc[page_num_actual - 1]
-    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
-    png_bytes = pix.tobytes("png")
-    doc.close()
-    return png_bytes
+    from app.r2_client import get_file_bytes
+    try:
+        pdf_key = find_book_pdf_path(book, pdf_type)
+        pdf_bytes = get_file_bytes(pdf_key)
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=404, detail=f"Cambridge IELTS {book} PDF not found")
+        
+    try:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        page_num_actual = min(max(1, page_number), len(doc))
+        page = doc[page_num_actual - 1]
+        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+        png_bytes = pix.tobytes("png")
+        doc.close()
+        return png_bytes
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @lru_cache(maxsize=64)
 def get_pdf_part_bytes(book: int, pdf_type: str, test: int, part_key: str) -> bytes:
@@ -85,8 +96,19 @@ def get_pdf_part_bytes(book: int, pdf_type: str, test: int, part_key: str) -> by
     if not pages:
         raise HTTPException(status_code=404, detail=f"Part {part_key} not mapped or found for Book {book} Test {test}")
 
-    pdf_path = find_book_pdf_path(book, pdf_type)
-    doc = fitz.open(str(pdf_path))
+    from app.r2_client import get_file_bytes
+    try:
+        pdf_key = find_book_pdf_path(book, pdf_type)
+        pdf_bytes = get_file_bytes(pdf_key)
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=404, detail=f"Cambridge IELTS {book} PDF not found")
+        
+    try:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
     segments = []
     for p in pages:

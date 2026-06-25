@@ -54,9 +54,17 @@ def admin_update_audio(book: int, test: int, audio_assets: list):
     return {"status": "ok"}
 
 def extract_answers(book: int, test: int, page_number: int, skill: str):
-    pdf_path = find_book_pdf_path(book, "solution")
+    from app.r2_client import get_file_bytes
     try:
-        doc = fitz.open(str(pdf_path))
+        pdf_key = find_book_pdf_path(book, "solution")
+        pdf_bytes = get_file_bytes(pdf_key)
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=404, detail=f"Cambridge IELTS {book} PDF not found")
+        
+    try:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         page_num_actual = min(max(1, page_number), len(doc))
         page = doc[page_num_actual - 1]
         text = page.get_text("text")

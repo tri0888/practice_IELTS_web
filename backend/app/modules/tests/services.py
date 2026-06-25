@@ -4,23 +4,31 @@ import fitz  # PyMuPDF
 from fastapi import HTTPException
 from app.models import database as db
 
-def find_book_pdf_path(book: int, pdf_type: str = "academic") -> Path:
-    repo_root = Path(__file__).resolve().parents[4]
-    cambridge_dir = repo_root / "Books" / "Cambridge IELTS 11-20"
+def find_book_pdf_path(book: int, pdf_type: str = "academic") -> str:
+    file_suffix = " Solution" if pdf_type == "solution" else ""
+    standard_key = f"Cambridge IELTS 11-20/Cam {book}/Cambridge {book}{file_suffix}.pdf"
     
-    # 1. Direct path lookup under the expected structure
-    pdf_path = cambridge_dir / f"Cam {book}" / f"Cambridge {book}.pdf"
-    if pdf_path.exists():
-        return pdf_path
+    from app.r2_client import is_r2_enabled
+    if is_r2_enabled():
+        return standard_key
         
-    # 2. Case-insensitive rglob search fallback
-    for p in repo_root.rglob("*.pdf"):
-        if "__MACOSX" not in p.parts:
-            # Check if directory name matches "Cam {book}" or filename matches "Cambridge {book}"
-            if f"Cam {book}" in p.parts or f"Cambridge {book}" in p.name or f"Cambridge-{book}" in p.name or f"Cambridge_{book}" in p.name:
-                return p
-                
-    raise FileNotFoundError(f"Full Cambridge IELTS {book} PDF not found")
+    # Local mode:
+    repo_root = Path(__file__).resolve().parents[4]
+    books_dir = repo_root / "Books"
+    
+    # Check standard local path
+    local_path = books_dir / standard_key
+    if local_path.exists():
+        return standard_key
+        
+    # Scan locally fallback
+    if books_dir.exists():
+        for p in books_dir.rglob("*.pdf"):
+            if "__MACOSX" not in p.parts:
+                if f"Cam {book}" in p.parts or f"Cambridge {book}" in p.name or f"Cambridge-{book}" in p.name or f"Cambridge_{book}" in p.name:
+                    return p.relative_to(books_dir).as_posix()
+                    
+    raise HTTPException(status_code=404, detail=f"Cambridge IELTS {book} PDF not found")
 
 def list_tests():
     if db.is_available():
@@ -31,13 +39,17 @@ def list_tests():
 
 def get_pdf_page_count(book: int, pdf_type: str = "academic"):
     try:
-        pdf_path = find_book_pdf_path(book, pdf_type)
-        doc = fitz.open(str(pdf_path))
+        from app.r2_client import get_file_bytes
+        pdf_key = find_book_pdf_path(book, pdf_type)
+        pdf_bytes = get_file_bytes(pdf_key)
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         page_count = len(doc)
         doc.close()
         return {"book": book, "pdf_type": pdf_type, "page_count": page_count}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=404, detail=f"Cambridge IELTS {book} PDF not found")
 
 def get_test(book: int, test: int):
     if db.is_available():
@@ -62,27 +74,38 @@ def get_skill(book: int, test: int, skill: str):
             return s
     raise HTTPException(status_code=404, detail="skill not found")
 
-def get_ets_pdf_path(pdf_type: str, test_number: int, year: str = "2026") -> Path:
-    repo_root = Path(__file__).resolve().parents[4]
-    ets_dir = repo_root / "Books" / "ETS 24-26" / f"ETS {year}"
+def get_ets_pdf_path(pdf_type: str, test_number: int, year: str = "2026") -> str:
+    pdf_type_upper = pdf_type.upper()
+    standard_keys = [
+        f"ETS 24-26/ETS {year}/ETS-{year}-{pdf_type_upper}/TEST_{test_number:02d}.pdf",
+        f"ETS 24-26/ETS {year}/ETS-{year}-{pdf_type_upper}/TEST_{test_number}.pdf",
+        f"ETS {year}/ETS-{year}-{pdf_type_upper}/TEST_{test_number:02d}.pdf"
+    ]
     
-    if pdf_type.lower() == "lc":
-        pdf_path = ets_dir / f"ETS-{year}-LC" / f"TEST_{test_number:02d}.pdf"
-    elif pdf_type.lower() == "rc":
-        pdf_path = ets_dir / f"ETS-{year}-RC" / f"TEST_{test_number:02d}.pdf"
-    else:
-        raise HTTPException(status_code=400, detail="Invalid PDF type. Use lc or rc")
+    from app.r2_client import is_r2_enabled
+    if is_r2_enabled():
+        return standard_keys[0]
         
-    if not pdf_path.exists():
-        pdf_path_alt = ets_dir / f"ETS-{year}-{pdf_type.upper()}" / f"TEST_{test_number}.pdf"
-        if pdf_path_alt.exists():
-            return pdf_path_alt
-        legacy_dir = repo_root / "Books" / f"ETS {year}"
-        pdf_path_legacy = legacy_dir / f"ETS-{year}-{pdf_type.upper()}" / f"TEST_{test_number:02d}.pdf"
-        if pdf_path_legacy.exists():
-            return pdf_path_legacy
-        raise HTTPException(status_code=404, detail=f"ETS {year} {pdf_type.upper()} Test {test_number} PDF not found")
-    return pdf_path
+    # Local mode:
+    repo_root = Path(__file__).resolve().parents[4]
+    books_dir = repo_root / "Books"
+    
+    for key in standard_keys:
+        if (books_dir / key).exists():
+            return key
+            
+    # Scan local books directory
+    if books_dir.exists():
+        ets_sub = books_dir / "ETS 24-26" / f"ETS {year}"
+        if not ets_sub.exists():
+            ets_sub = books_dir / f"ETS {year}"
+        if ets_sub.exists():
+            for p in ets_sub.rglob("*.pdf"):
+                if f"TEST_{test_number:02d}" in p.name or f"TEST_{test_number}" in p.name or f"Test_{test_number:02d}" in p.name or f"test_{test_number}" in p.name:
+                    if pdf_type_upper in p.parts or pdf_type_upper in p.name or pdf_type.lower() in p.name:
+                        return p.relative_to(books_dir).as_posix()
+                        
+    raise HTTPException(status_code=404, detail=f"ETS {year} {pdf_type_upper} Test {test_number} PDF not found")
 
 def get_ets_audio_dir(year: str, test_number: int) -> Path:
     repo_root = Path(__file__).resolve().parents[4]
@@ -110,23 +133,70 @@ def get_ets_audio_dir(year: str, test_number: int) -> Path:
 
 def get_ets_audio_list(test_number: int, year: str = "2026") -> list[str]:
     audio_dir = get_ets_audio_dir(year, test_number)
-    if not audio_dir.exists():
-        return []
+    files = []
+    if audio_dir.exists():
+        files = [f.name for f in audio_dir.glob("*.mp3") if f.is_file()]
         
-    files = [f.name for f in audio_dir.glob("*.mp3") if f.is_file()]
-    
+    if not files:
+        from app.r2_client import get_r2_client, get_r2_bucket, is_r2_enabled
+        if is_r2_enabled():
+            try:
+                client = get_r2_client()
+                bucket = get_r2_bucket()
+                paginator = client.get_paginator('list_objects_v2')
+                prefixes = [
+                    f"ETS 24-26/ETS {year}/AUDIO/Test_{test_number:02d}/",
+                    f"ETS 24-26/ETS {year}/AUDIO/TEST_{test_number:02d}/",
+                    f"ETS 24-26/ETS {year}/AUDIO/Test {test_number}/",
+                    f"ETS {year}/AUDIO/Test_{test_number:02d}/",
+                    f"ETS {year}/AUDIO/Test {test_number}/"
+                ]
+                for prefix in prefixes:
+                    for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+                        for obj in page.get('Contents', []):
+                            key = obj['Key']
+                            if key.lower().endswith(".mp3") and "__macosx" not in key.lower():
+                                files.append(Path(key).name)
+                    if files:
+                        break
+            except Exception:
+                pass
+            
     def natural_sort_key(s):
         return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', s)]
     
     files.sort(key=natural_sort_key)
     return files
 
-def get_ets_audio_file_path(test_number: int, file_name: str, year: str = "2026") -> Path:
-    audio_dir = get_ets_audio_dir(year, test_number)
-    audio_path = audio_dir / file_name
-    if not audio_path.exists():
-        raise HTTPException(status_code=404, detail="Audio file not found")
-    return audio_path
+def get_ets_audio_file_path(test_number: int, file_name: str, year: str = "2026") -> str:
+    standard_keys = [
+        f"ETS 24-26/ETS {year}/AUDIO/Test_{test_number:02d}/{file_name}",
+        f"ETS 24-26/ETS {year}/AUDIO/TEST_{test_number:02d}/{file_name}",
+        f"ETS 24-26/ETS {year}/AUDIO/Test {test_number}/{file_name}",
+        f"ETS {year}/AUDIO/Test_{test_number:02d}/{file_name}",
+        f"ETS {year}/AUDIO/Test {test_number}/{file_name}"
+    ]
+    
+    from app.r2_client import is_r2_enabled
+    if is_r2_enabled():
+        return standard_keys[0]
+        
+    # Local mode:
+    repo_root = Path(__file__).resolve().parents[4]
+    books_dir = repo_root / "Books"
+    
+    for key in standard_keys:
+        if (books_dir / key).exists():
+            return key
+            
+    if books_dir.exists():
+        audio_dir = get_ets_audio_dir(year, test_number)
+        if audio_dir.exists():
+            audio_path = audio_dir / file_name
+            if audio_path.exists():
+                return audio_path.relative_to(books_dir).as_posix()
+                
+    raise HTTPException(status_code=404, detail=f"ETS {year} Audio Test {test_number} File {file_name} not found")
 
 def get_ets_answers(pdf_type: str, test_number: int, year: str = "2026") -> dict:
     import json

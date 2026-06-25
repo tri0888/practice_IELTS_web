@@ -115,7 +115,11 @@ function TestsContent() {
   }, [data])
 
   const sortedBooks = useMemo(() => {
-    return Object.keys(testsByBook).map(Number).sort((a, b) => b - a)
+    const booksInDb = Object.keys(testsByBook).map(Number)
+    if (booksInDb.length > 0) {
+      return booksInDb.sort((a, b) => b - a)
+    }
+    return [19, 18, 17, 16, 15, 14, 13, 12, 11]
   }, [testsByBook])
 
   // Apply filters handler
@@ -159,12 +163,19 @@ function TestsContent() {
     const list: any[] = []
     const anySkillSelected = Object.values(appliedSkills).some(val => val)
 
-    // 1. IELTS tests (from backend database)
-    if (appliedType !== 'toeic' && data && Array.isArray(data)) {
-      data.forEach((t: any) => {
-        const isIeltsTest = t.book !== 2024 && t.book !== 2026
-        if (!isIeltsTest) return
+    // 1. IELTS tests (from backend database or fallback)
+    if (appliedType !== 'toeic') {
+      const dbIelts = (data && Array.isArray(data))
+        ? data.filter((t: any) => t.book !== 2024 && t.book !== 2026)
+        : []
+      
+      const ieltsTestsList = dbIelts.length > 0
+        ? dbIelts
+        : [19, 18, 17, 16, 15, 14, 13, 12, 11].flatMap(book =>
+            Array.from({ length: 4 }, (_, idx) => ({ book, test_number: idx + 1 }))
+          )
 
+      ieltsTestsList.forEach((t: any) => {
         const skillsToAdd = ['listening', 'reading', 'writing', 'speaking']
         skillsToAdd.forEach(s => {
           if (!anySkillSelected || appliedSkills[s as keyof typeof appliedSkills]) {
@@ -491,7 +502,10 @@ function TestsContent() {
                 </div>
 
                 <div className="book-grid" style={{ paddingLeft: 0, paddingRight: 0 }}>
-                  {(testsByBook[selectedBook] ?? []).map((t: any) => (
+                  {(testsByBook[selectedBook] && testsByBook[selectedBook].length > 0
+                    ? testsByBook[selectedBook]
+                    : Array.from({ length: 4 }, (_, idx) => ({ test_number: idx + 1 }))
+                  ).map((t: any) => (
                     <div
                       key={t.test_number}
                       className="test-card slide-up clickable-test-card"
