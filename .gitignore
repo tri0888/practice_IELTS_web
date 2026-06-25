@@ -2,7 +2,6 @@
 Books
 node_modules
 __pycache__
-__init__.py
 .next
 .cache\
 .agent
