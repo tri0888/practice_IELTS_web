@@ -6,7 +6,7 @@ interface PDFViewerProps {
   containerRef?: React.RefObject<HTMLDivElement | null>
   style?: React.CSSProperties
   book?: string | number
-  pdfType?: 'academic' | 'solution'
+  pdfType?: 'academic' | 'solution' | 'lc' | 'rc'
   partKey?: string
   test?: number
 }

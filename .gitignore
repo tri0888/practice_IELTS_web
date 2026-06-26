@@ -5,6 +5,4 @@ __pycache__
 .next
 .cache\
 .agent
-output
-ielts-app
 .env

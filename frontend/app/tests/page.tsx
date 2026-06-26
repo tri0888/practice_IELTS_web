@@ -35,6 +35,7 @@ function TestsContent() {
     writing: false,
     speaking: false,
   })
+  const [tempSortOrder, setTempSortOrder] = useState<'desc' | 'asc'>('desc')
 
   // Applied filter states
   const [appliedType, setAppliedType] = useState<'all' | 'ielts' | 'toeic'>('all')
@@ -44,6 +45,7 @@ function TestsContent() {
     writing: false,
     speaking: false,
   })
+  const [appliedSortOrder, setAppliedSortOrder] = useState<'desc' | 'asc'>('desc')
   const [isFiltered, setIsFiltered] = useState(false)
 
   // Modal selection popup state
@@ -151,6 +153,7 @@ function TestsContent() {
     isApplyingFiltersRef.current = true
     setAppliedType(tempType)
     setAppliedSkills({ ...tempSkills })
+    setAppliedSortOrder(tempSortOrder)
     setIsFiltered(true)
 
     // Update URL query parameters based on tempType to match sidebar selection state
@@ -172,6 +175,7 @@ function TestsContent() {
       writing: false,
       speaking: false,
     })
+    setTempSortOrder('desc')
     setAppliedType(typeParam === 'ielts' ? 'ielts' : typeParam === 'toeic' ? 'toeic' : 'all')
     setAppliedSkills({
       listening: false,
@@ -179,6 +183,7 @@ function TestsContent() {
       writing: false,
       speaking: false,
     })
+    setAppliedSortOrder('desc')
     setIsFiltered(false)
   }
 
@@ -260,13 +265,21 @@ function TestsContent() {
       })
     }
 
-    // Sort: newer books/years first, then test number
+    // Sort with priority: IELTS first when "All Exams", then by book/year, then test number
     return list.sort((a, b) => {
-      if (b.book !== a.book) return b.book - a.book
+      // When showing all exams, always group IELTS before TOEIC
+      if (appliedType === 'all' && a.type !== b.type) {
+        return a.type === 'ielts' ? -1 : 1
+      }
+      // Within same type, sort by book/year number
+      if (a.book !== b.book) {
+        return appliedSortOrder === 'desc' ? b.book - a.book : a.book - b.book
+      }
+      // Same book, sort by test number (always ascending)
       if (a.testNum !== b.testNum) return a.testNum - b.testNum
       return a.skill.localeCompare(b.skill)
     })
-  }, [ieltsData, toeicData, appliedType, appliedSkills])
+  }, [ieltsData, toeicData, appliedType, appliedSkills, appliedSortOrder])
 
   return (
     <div className="tests-layout-container">
@@ -355,6 +368,33 @@ function TestsContent() {
                 </label>
               </>
             )}
+          </div>
+        </div>
+
+        {/* Sort Order filter */}
+        <div className="filter-group">
+          <label className="filter-group-label">Sort Order</label>
+          <div className="filter-radio-list">
+            <label className="filter-radio-item">
+              <input 
+                type="radio" 
+                name="sort-order" 
+                value="desc" 
+                checked={tempSortOrder === 'desc'} 
+                onChange={() => setTempSortOrder('desc')} 
+              />
+              <span>High → Low (19, 18, …11)</span>
+            </label>
+            <label className="filter-radio-item">
+              <input 
+                type="radio" 
+                name="sort-order" 
+                value="asc" 
+                checked={tempSortOrder === 'asc'} 
+                onChange={() => setTempSortOrder('asc')} 
+              />
+              <span>Low → High (11, 12, …19)</span>
+            </label>
           </div>
         </div>
 

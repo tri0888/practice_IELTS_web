@@ -10,7 +10,7 @@ import './page.css'
 const BACKEND = '/api'
 const DURATION_SECONDS = 75 * 60 // 75 minutes for TOEIC RC
 
-type ActivePart = 'all' | 'part5' | 'part6' | 'part7'
+type ActivePart = 'part5' | 'part6' | 'part7'
 
 export default function ETSReadingPracticePage() {
   const params = useParams<{ year: string; test: string }>()
@@ -20,7 +20,7 @@ export default function ETSReadingPracticePage() {
   const [answers, setAnswers] = useState<Record<number, string>>({})
   const [timeLeft, setTimeLeft] = useState(DURATION_SECONDS)
   const [isSubmitted, setIsSubmitted] = useState(false)
-  const [activePart, setActivePart] = useState<ActivePart>('all')
+  const [activePart, setActivePart] = useState<ActivePart>('part5')
   const [loading, setLoading] = useState(true)
 
   const [showResult, setShowResult] = useState(false)
@@ -122,7 +122,7 @@ export default function ETSReadingPracticePage() {
   // Filter questions by selected part
   const filteredQuestions = useMemo(() => {
     const allQs = Array.from({ length: 100 }, (_, i) => i + 101)
-    if (activePart === 'all') return allQs
+
     if (activePart === 'part5') return allQs.filter(q => q >= 101 && q <= 130)
     if (activePart === 'part6') return allQs.filter(q => q >= 131 && q <= 146)
     if (activePart === 'part7') return allQs.filter(q => q >= 147 && q <= 200)
@@ -209,7 +209,7 @@ export default function ETSReadingPracticePage() {
             book={year}
             test={parseInt(test, 10)}
             pdfType="rc"
-            partKey={activePart === 'all' ? 'reading_all' : `reading_${activePart.replace('part', '')}`}
+            partKey={`reading_${activePart.replace('part', '')}`}
             pages={[]}
             style={{ height: '100%', width: '100%', padding: 0 }}
           />
@@ -222,14 +222,14 @@ export default function ETSReadingPracticePage() {
         <div className="split-view__panel listening-split-panel" style={{ padding: '16px 12px 80px' }}>
           {/* Section Navigation Tabs */}
           <div className="section-tabs listening-tabs-wrapper">
-            {(['all', 'part5', 'part6', 'part7'] as const).map(part => (
+            {(['part5', 'part6', 'part7'] as const).map(part => (
               <button
                 key={part}
                 className={`section-tab ${activePart === part ? 'section-tab--active' : ''}`}
                 onClick={() => setActivePart(part)}
                 style={{ textTransform: 'capitalize' }}
               >
-                {part === 'all' ? 'All' : part.replace('part', 'Part ')}
+                {part.replace('part', 'Part ')}
               </button>
             ))}
           </div>

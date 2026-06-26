@@ -2,7 +2,50 @@
 import { useMemo, useState, useEffect } from 'react'
 import useSWR from 'swr'
 import Link from 'next/link'
+import PDFViewer from '@/components/PDFViewer/PDFViewer'
 import './history.css'
+
+const getPartKeyForQuestion = (q: number | null, skill: string): string => {
+  if (!skill) return ''
+  const s = skill.toLowerCase()
+  if (q === null) {
+    if (s === 'listening' || s === 'ets_lc') return 'listening_all'
+    if (s === 'reading' || s === 'ets_rc') return 'reading_all'
+    if (s === 'writing') return 'writing_1'
+    if (s === 'speaking') return 'speaking'
+    return ''
+  }
+  
+  if (s === 'listening') {
+    if (q >= 1 && q <= 10) return 'listening_1'
+    if (q >= 11 && q <= 20) return 'listening_2'
+    if (q >= 21 && q <= 30) return 'listening_3'
+    return 'listening_4'
+  }
+  if (s === 'reading') {
+    if (q >= 1 && q <= 13) return 'reading_1'
+    if (q >= 14 && q <= 26) return 'reading_2'
+    return 'reading_3'
+  }
+  if (s === 'ets_lc') {
+    if (q >= 1 && q <= 6) return 'listening_1'
+    if (q >= 7 && q <= 31) return 'listening_2'
+    if (q >= 32 && q <= 70) return 'listening_3'
+    return 'listening_4'
+  }
+  if (s === 'ets_rc') {
+    if (q >= 101 && q <= 130) return 'reading_5'
+    if (q >= 131 && q <= 146) return 'reading_6'
+    return 'reading_7'
+  }
+  if (s === 'writing') {
+    return q === 2 ? 'writing_2' : 'writing_1'
+  }
+  if (s === 'speaking') {
+    return 'speaking'
+  }
+  return ''
+}
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -272,91 +315,118 @@ export default function HistoryPage() {
         )}
 
         {selectedAttemptId && !detailLoading && detail && (
-          <div className="history-detail-content fade-in">
-            <div className="detail-header">
-              <h3 className="detail-title">{formatTestName(detail)}</h3>
-              <div className="detail-skill-badge">{formatSkillName(detail.skill)}</div>
-              <p className="detail-date">Attempted at: {formatDate(detail.submitted_at || detail.started_at)}</p>
-            </div>
-
-            {/* Score Stats widget */}
-            {detail.result && typeof detail.result.correct === 'number' && (
-              <div className="detail-stats">
-                <div className="detail-stat-card">
-                  <div className="detail-stat-val text-success">
-                    {detail.result.correct}
-                  </div>
-                  <div className="detail-stat-label">Correct Answers</div>
-                </div>
-                <div className="detail-stat-card">
-                  <div className="detail-stat-val text-error">
-                    {detail.result.total - detail.result.correct}
-                  </div>
-                  <div className="detail-stat-label">Incorrect Answers</div>
-                </div>
-                <div className="detail-stat-card">
-                  <div className="detail-stat-val text-primary">
-                    {Math.round((detail.result.correct / detail.result.total) * 100)}%
-                  </div>
-                  <div className="detail-stat-label">Accuracy Rate</div>
-                </div>
-              </div>
-            )}
-
-            {/* Question Grid Overview */}
-            <div className="detail-section">
-              <h4 className="detail-section-title">🎯 Question Map</h4>
-              <div className="question-grid-overview">
-                {parsedQuestions.map((q) => (
-                  <button 
-                    key={q.qNum}
-                    onClick={() => setSelectedQNum(q.qNum)} 
-                    className={`question-circle-item ${q.status} ${selectedQNum === q.qNum ? 'focused' : ''}`}
-                    title={`Question ${q.qNum}: ${q.status === 'correct' ? 'Correct' : q.status === 'incorrect' ? 'Incorrect' : 'Unanswered'}\nYour Answer: ${q.userAns || 'Unanswered'}\nCorrect Answer: ${q.correctAns}`}
-                  >
-                    {q.qNum}
-                  </button>
-                ))}
-              </div>
-              <div className="question-grid-legend">
-                <span className="legend-item"><span className="legend-dot legend-dot--correct" /> Correct</span>
-                <span className="legend-item"><span className="legend-dot legend-dot--incorrect" /> Incorrect</span>
-                <span className="legend-item"><span className="legend-dot legend-dot--blank" /> Unanswered</span>
-              </div>
-            </div>
-
-            {/* Selected Question Detail Comparison */}
-            <div className="detail-section selected-question-section">
-              {selectedQuestionObj ? (
-                <div className={`selected-question-box ${selectedQuestionObj.status}`}>
-                  <div className="selected-question-box__header">
-                    <span className="selected-question-title">Question {selectedQuestionObj.qNum}</span>
-                    <span className={`selected-question-badge ${selectedQuestionObj.status}`}>
-                      {selectedQuestionObj.status === 'correct' ? '✓ Correct' : selectedQuestionObj.status === 'incorrect' ? '✗ Incorrect' : '- Unanswered'}
-                    </span>
-                  </div>
-                  <div className="selected-question-compare">
-                    <div className="compare-item">
-                      <span className="compare-item__label">Your Answer</span>
-                      <span className={`compare-item__val user-ans ${selectedQuestionObj.status}`}>
-                        {selectedQuestionObj.userAns || <span className="empty-text">Blank</span>}
-                      </span>
-                    </div>
-                    <div className="compare-item">
-                      <span className="compare-item__label">Correct Answer</span>
-                      <span className="compare-item__val correct-ans">
-                        {selectedQuestionObj.correctAns || <span className="empty-text">---</span>}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+          <div className="history-split-view">
+            {/* Left Panel: PDF Viewer */}
+            <div className="history-pdf-container">
+              {selectedQNum !== null ? (
+                <PDFViewer
+                  book={detail.book}
+                  test={detail.test}
+                  pdfType={detail.skill.startsWith('ets_') ? (detail.skill === 'ets_lc' ? 'lc' : 'rc') : 'academic'}
+                  partKey={getPartKeyForQuestion(selectedQNum, detail.skill)}
+                  pages={[]}
+                  style={{ height: '100%', width: '100%', padding: 0 }}
+                />
               ) : (
-                <div className="selected-question-placeholder">
-                  💡 Click on a question number above to view your answer and the correct answer.
+                <div className="history-pdf-placeholder">
+                  <div className="placeholder-glow" />
+                  <span className="placeholder-icon">📄</span>
+                  <h3>No Question Selected</h3>
+                  <p>Click on any question number in the map on the right to load its corresponding test sheet page.</p>
                 </div>
               )}
             </div>
 
+            {/* Vertical Divider */}
+            <div className="history-split-divider" />
+
+            {/* Right Panel: Result Details */}
+            <div className="history-detail-scroll-panel fade-in">
+              <div className="detail-header">
+                <h3 className="detail-title">{formatTestName(detail)}</h3>
+                <div className="detail-skill-badge">{formatSkillName(detail.skill)}</div>
+                <p className="detail-date">Attempted at: {formatDate(detail.submitted_at || detail.started_at)}</p>
+              </div>
+
+              {/* Score Stats widget */}
+              {detail.result && typeof detail.result.correct === 'number' && (
+                <div className="detail-stats">
+                  <div className="detail-stat-card">
+                    <div className="detail-stat-val text-success">
+                      {detail.result.correct}
+                    </div>
+                    <div className="detail-stat-label">Correct Answers</div>
+                  </div>
+                  <div className="detail-stat-card">
+                    <div className="detail-stat-val text-error">
+                      {detail.result.total - detail.result.correct}
+                    </div>
+                    <div className="detail-stat-label">Incorrect Answers</div>
+                  </div>
+                  <div className="detail-stat-card">
+                    <div className="detail-stat-val text-primary">
+                      {Math.round((detail.result.correct / detail.result.total) * 100)}%
+                    </div>
+                    <div className="detail-stat-label">Accuracy Rate</div>
+                  </div>
+                </div>
+              )}
+
+              {/* Question Grid Overview */}
+              <div className="detail-section">
+                <h4 className="detail-section-title">🎯 Question Map</h4>
+                <div className="question-grid-overview">
+                  {parsedQuestions.map((q) => (
+                    <button 
+                      key={q.qNum}
+                      onClick={() => setSelectedQNum(q.qNum)} 
+                      className={`question-circle-item ${q.status} ${selectedQNum === q.qNum ? 'focused' : ''}`}
+                      title={`Question ${q.qNum}: ${q.status === 'correct' ? 'Correct' : q.status === 'incorrect' ? 'Incorrect' : 'Unanswered'}\nYour Answer: ${q.userAns || 'Unanswered'}\nCorrect Answer: ${q.correctAns}`}
+                    >
+                      {q.qNum}
+                    </button>
+                  ))}
+                </div>
+                <div className="question-grid-legend">
+                  <span className="legend-item"><span className="legend-dot legend-dot--correct" /> Correct</span>
+                  <span className="legend-item"><span className="legend-dot legend-dot--incorrect" /> Incorrect</span>
+                  <span className="legend-item"><span className="legend-dot legend-dot--blank" /> Unanswered</span>
+                </div>
+              </div>
+
+              {/* Selected Question Detail Comparison */}
+              <div className="detail-section selected-question-section">
+                {selectedQuestionObj ? (
+                  <div className={`selected-question-box ${selectedQuestionObj.status}`}>
+                    <div className="selected-question-box__header">
+                      <span className="selected-question-title">Question {selectedQuestionObj.qNum}</span>
+                      <span className={`selected-question-badge ${selectedQuestionObj.status}`}>
+                        {selectedQuestionObj.status === 'correct' ? '✓ Correct' : selectedQuestionObj.status === 'incorrect' ? '✗ Incorrect' : '- Unanswered'}
+                      </span>
+                    </div>
+                    <div className="selected-question-compare">
+                      <div className="compare-item">
+                        <span className="compare-item__label">Your Answer</span>
+                        <span className={`compare-item__val user-ans ${selectedQuestionObj.status}`}>
+                          {selectedQuestionObj.userAns || <span className="empty-text">Blank</span>}
+                        </span>
+                      </div>
+                      <div className="compare-item">
+                        <span className="compare-item__label">Correct Answer</span>
+                        <span className="compare-item__val correct-ans">
+                          {selectedQuestionObj.correctAns || <span className="empty-text">---</span>}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="selected-question-placeholder">
+                    💡 Click on a question number above to view your answer and the correct answer.
+                  </div>
+                )}
+              </div>
+
+            </div>
           </div>
         )}
       </div>
