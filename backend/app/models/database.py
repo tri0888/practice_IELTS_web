@@ -67,16 +67,30 @@ def is_available() -> bool:
     return _db is not None
 
 def tests_collection():
-    return _db["tests"] if _db is not None else None
+    return _db["ielts_tests"] if _db is not None else None
 
 def histories_collection():
     return _db["histories"] if _db is not None else None
 
 def audio_collection():
-    return _db["audio_assets"] if _db is not None else None
+    return _db["ielts_audio_assets"] if _db is not None else None
 
 def layouts_collection():
-    return _db["layouts"] if _db is not None else None
+    return _db["ielts_layouts"] if _db is not None else None
 
 def answers_collection():
-    return _db["answers"] if _db is not None else None
+    return _db["ielts_answers"] if _db is not None else None
+
+# TOEIC collections
+def toeic_tests_collection():
+    return _db["toeic_tests"] if _db is not None else None
+
+def toeic_audio_collection():
+    return _db["toeic_audio_assets"] if _db is not None else None
+
+def toeic_layouts_collection():
+    return _db["toeic_layouts"] if _db is not None else None
+
+def toeic_answers_collection():
+    return _db["toeic_answers"] if _db is not None else None
+

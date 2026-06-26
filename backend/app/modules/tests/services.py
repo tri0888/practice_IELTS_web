@@ -137,36 +137,12 @@ def get_ets_audio_dir(year: str, test_number: int) -> Path:
     return ets_dir / "AUDIO" / f"Test {test_number}"
 
 def get_ets_audio_list(test_number: int, year: str = "2026") -> list[str]:
-    audio_dir = get_ets_audio_dir(year, test_number)
-    files = []
-    if audio_dir.exists():
-        files = [f.name for f in audio_dir.glob("*.mp3") if f.is_file()]
-        
-    if not files:
-        from app.modules.r2_client import get_r2_client, get_r2_bucket, is_r2_enabled
-        if is_r2_enabled():
-            try:
-                client = get_r2_client()
-                bucket = get_r2_bucket()
-                paginator = client.get_paginator('list_objects_v2')
-                prefixes = [
-                    f"ETS 24-26/ETS {year}/AUDIO/Test_{test_number:02d}/",
-                    f"ETS 24-26/ETS {year}/AUDIO/TEST_{test_number:02d}/",
-                    f"ETS 24-26/ETS {year}/AUDIO/Test {test_number}/",
-                    f"ETS {year}/AUDIO/Test_{test_number:02d}/",
-                    f"ETS {year}/AUDIO/Test {test_number}/"
-                ]
-                for prefix in prefixes:
-                    for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
-                        for obj in page.get('Contents', []):
-                            key = obj['Key']
-                            if key.lower().endswith(".mp3") and "__macosx" not in key.lower():
-                                files.append(Path(key).name)
-                    if files:
-                        break
-            except Exception:
-                pass
-            
+    coll = db.toeic_audio_collection()
+    if coll is None:
+        return []
+    results = list(coll.find({"book": int(year), "test_number": test_number}, {"file_name": 1, "_id": 0}))
+    files = [r["file_name"] for r in results]
+    
     def natural_sort_key(s):
         return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', s)]
     
@@ -174,50 +150,35 @@ def get_ets_audio_list(test_number: int, year: str = "2026") -> list[str]:
     return files
 
 def get_ets_audio_file_path(test_number: int, file_name: str, year: str = "2026") -> str:
-    standard_keys = [
-        f"ETS 24-26/ETS {year}/AUDIO/Test_{test_number:02d}/{file_name}",
-        f"ETS 24-26/ETS {year}/AUDIO/TEST_{test_number:02d}/{file_name}",
-        f"ETS 24-26/ETS {year}/AUDIO/Test {test_number}/{file_name}",
-        f"ETS {year}/AUDIO/Test_{test_number:02d}/{file_name}",
-        f"ETS {year}/AUDIO/Test {test_number}/{file_name}"
-    ]
-    
-    from app.modules.r2_client import is_r2_enabled
-    if is_r2_enabled():
-        return standard_keys[0]
-        
-    # Local mode:
-    repo_root = Path(__file__).resolve().parents[4]
-    books_dir = repo_root / "Books"
-    
-    for key in standard_keys:
-        if (books_dir / key).exists():
-            return key
-            
-    if books_dir.exists():
-        audio_dir = get_ets_audio_dir(year, test_number)
-        if audio_dir.exists():
-            audio_path = audio_dir / file_name
-            if audio_path.exists():
-                return audio_path.relative_to(books_dir).as_posix()
-                
+    coll = db.toeic_audio_collection()
+    if coll is not None:
+        doc = coll.find_one({"book": int(year), "test_number": test_number, "file_name": file_name})
+        if doc and "relative_path" in doc:
+            return doc["relative_path"]
     raise HTTPException(status_code=404, detail=f"ETS {year} Audio Test {test_number} File {file_name} not found")
 
 def get_ets_answers(pdf_type: str, test_number: int, year: str = "2026") -> dict:
-    import json
-    repo_root = Path(__file__).resolve().parents[4]
-    answers_json = repo_root / "backend" / "config" / f"ets_{year}_answers.json"
-    
-    if not answers_json.exists():
+    coll = db.toeic_answers_collection()
+    if coll is None:
         return {"test": test_number, "type": pdf_type, "answers": {}}
-        
-    try:
-        data = json.loads(answers_json.read_text(encoding="utf-8"))
-        test_data = data.get(str(test_number), {})
-        answers = test_data.get(pdf_type.lower(), {})
-        return {"test": test_number, "type": pdf_type, "answers": answers}
-    except Exception as e:
-        print(f"Error loading ETS answers: {e}")
-        return {"test": test_number, "type": pdf_type, "answers": {}}
+    doc = coll.find_one({"book": int(year), "test": test_number})
+    if doc:
+        field_name = "listening" if pdf_type.lower() in ("lc", "listening") else "reading"
+        answers = doc.get(field_name, {})
+        simple_answers = {}
+        for q_num, ans_obj in answers.items():
+            if isinstance(ans_obj, dict):
+                simple_answers[q_num] = ans_obj.get("answer", "")
+            else:
+                simple_answers[q_num] = ans_obj
+        return {"test": test_number, "type": pdf_type, "answers": simple_answers}
+    return {"test": test_number, "type": pdf_type, "answers": {}}
+
+def list_toeic_tests() -> list:
+    coll = db.toeic_tests_collection()
+    if coll is not None:
+        return list(coll.find({}, {"book": 1, "test_number": 1, "sections": 1, "_id": 0}))
+    return []
+
 
 

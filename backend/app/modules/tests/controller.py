@@ -10,6 +10,11 @@ router = APIRouter(prefix="/api/tests", tags=["Tests"])
 def list_tests():
     return services.list_tests()
 
+@router.get("/toeic")
+def list_toeic_tests():
+    return services.list_toeic_tests()
+
+
 # Specific ETS routes (Must be defined before generic {book}/{test} parameters)
 @router.get("/ets/{year}/pdf/{pdf_type}/{test_number}")
 @router.get("/ets/pdf/{pdf_type}/{test_number}")

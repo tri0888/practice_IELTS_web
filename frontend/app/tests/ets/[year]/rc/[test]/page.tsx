@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import ResultModal from '@/components/ResultModal/ResultModal'
+import PDFViewer from '@/components/PDFViewer/PDFViewer'
 import './page.css'
 
 const BACKEND = '/api'
@@ -202,12 +203,15 @@ export default function ETSReadingPracticePage() {
 
       {/* Main Split View */}
       <div className="split-view" style={{ gridTemplateColumns: '1.2fr 1px 1fr' }}>
-        {/* Left Panel: PDF Viewer in Iframe */}
+        {/* Left Panel: PDF Viewer */}
         <div className="ets-pdf-container">
-          <iframe
-            src={`${BACKEND}/tests/ets/${year}/pdf/rc/${test}#toolbar=0`}
-            className="ets-pdf-iframe"
-            title={`ETS ${year} RC Test ${test}`}
+          <PDFViewer
+            book={year}
+            test={parseInt(test, 10)}
+            pdfType="rc"
+            partKey={activePart === 'all' ? 'reading_all' : `reading_${activePart.replace('part', '')}`}
+            pages={[]}
+            style={{ height: '100%', width: '100%', padding: 0 }}
           />
         </div>
 

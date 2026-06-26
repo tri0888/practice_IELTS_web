@@ -8,7 +8,8 @@ def stream_audio(file_name: str) -> str:
     if "/" in file_name or "\\" in file_name:
         file_name_clean = file_name.replace("\\", "/").strip("/")
         if db.is_available():
-            coll = db.audio_collection()
+            is_toeic = "ets" in file_name_clean.lower() or "toeic" in file_name_clean.lower()
+            coll = db.toeic_audio_collection() if is_toeic else db.audio_collection()
             if coll is not None:
                 doc = coll.find_one({"$or": [
                     {"relative_path": f"Books/{file_name_clean}"},
@@ -21,7 +22,8 @@ def stream_audio(file_name: str) -> str:
     else:
         # Fallback to legacy single filename match
         if db.is_available():
-            coll = db.audio_collection()
+            is_toeic = "ets" in file_name.lower() or "toeic" in file_name.lower()
+            coll = db.toeic_audio_collection() if is_toeic else db.audio_collection()
             if coll is not None:
                 doc = coll.find_one({"file_name": file_name})
                 if doc:

@@ -19,7 +19,8 @@ function TestsContent() {
   const searchParams = useSearchParams()
   const typeParam = searchParams.get('type')
 
-  const { data, error, isLoading } = useSWR('/api/tests', fetcher)
+  const { data: ieltsData, error: ieltsError, isLoading: ieltsLoading } = useSWR('/api/tests', fetcher)
+  const { data: toeicData, error: toeicError, isLoading: toeicLoading } = useSWR('/api/tests/toeic', fetcher)
 
   // Navigation states (used for standard view navigation hierarchy)
   const [selectedExam, setSelectedExam] = useState<'ielts' | 'toeic' | null>(null)
@@ -101,9 +102,9 @@ function TestsContent() {
 
   // Group tests by book
   const testsByBook = useMemo(() => {
-    if (!data || !Array.isArray(data)) return {}
+    if (!ieltsData || !Array.isArray(ieltsData)) return {}
     const grouped: Record<number, any[]> = {}
-    data.forEach((t: any) => {
+    ieltsData.forEach((t: any) => {
       const b = t.book ?? 11
       if (!grouped[b]) grouped[b] = []
       grouped[b].push(t)
@@ -112,7 +113,7 @@ function TestsContent() {
       grouped[b].sort((a: any, b: any) => a.test_number - b.test_number)
     })
     return grouped
-  }, [data])
+  }, [ieltsData])
 
   const sortedBooks = useMemo(() => {
     const booksInDb = Object.keys(testsByBook).map(Number)
@@ -121,6 +122,29 @@ function TestsContent() {
     }
     return [19, 18, 17, 16, 15, 14, 13, 12, 11]
   }, [testsByBook])
+
+  // Group TOEIC tests by year
+  const toeicTestsByYear = useMemo(() => {
+    if (!toeicData || !Array.isArray(toeicData)) return {}
+    const grouped: Record<number, any[]> = {}
+    toeicData.forEach((t: any) => {
+      const b = t.book
+      if (!grouped[b]) grouped[b] = []
+      grouped[b].push(t)
+    })
+    Object.keys(grouped).forEach((b: any) => {
+      grouped[b].sort((a: any, b: any) => a.test_number - b.test_number)
+    })
+    return grouped
+  }, [toeicData])
+
+  const sortedToeicYears = useMemo(() => {
+    const yearsInDb = Object.keys(toeicTestsByYear).map(Number)
+    if (yearsInDb.length > 0) {
+      return yearsInDb.sort((a, b) => b - a)
+    }
+    return [2026, 2024]
+  }, [toeicTestsByYear])
 
   // Apply filters handler
   const handleApplyFilters = () => {
@@ -165,8 +189,8 @@ function TestsContent() {
 
     // 1. IELTS tests (from backend database or fallback)
     if (appliedType !== 'toeic') {
-      const dbIelts = (data && Array.isArray(data))
-        ? data.filter((t: any) => t.book !== 2024 && t.book !== 2026)
+      const dbIelts = (ieltsData && Array.isArray(ieltsData))
+        ? ieltsData
         : []
       
       const ieltsTestsList = dbIelts.length > 0
@@ -194,35 +218,44 @@ function TestsContent() {
       })
     }
 
-    // 2. ETS TOEIC tests (generated locally)
+    // 2. ETS TOEIC tests (from backend database or fallback)
     if (appliedType !== 'ielts') {
-      const etsYears = [2024, 2026]
-      etsYears.forEach(year => {
-        for (let testNum = 1; testNum <= 10; testNum++) {
-          if (!anySkillSelected || appliedSkills.listening) {
-            list.push({
-              id: `ets-${year}-${testNum}-lc`,
-              type: 'toeic',
-              book: year,
-              testNum: testNum,
-              skill: 'listening',
-              label: `ETS TOEIC ${year}`,
-              title: `Practice Test ${testNum}`,
-              link: `/tests/ets/${year}/lc/${testNum}`
-            })
-          }
-          if (!anySkillSelected || appliedSkills.reading) {
-            list.push({
-              id: `ets-${year}-${testNum}-rc`,
-              type: 'toeic',
-              book: year,
-              testNum: testNum,
-              skill: 'reading',
-              label: `ETS TOEIC ${year}`,
-              title: `Practice Test ${testNum}`,
-              link: `/tests/ets/${year}/rc/${testNum}`
-            })
-          }
+      const dbToeic = (toeicData && Array.isArray(toeicData))
+        ? toeicData
+        : []
+      
+      const toeicTestsList = dbToeic.length > 0
+        ? dbToeic
+        : [2026, 2024].flatMap(year =>
+            Array.from({ length: 10 }, (_, idx) => ({ book: year, test_number: idx + 1 }))
+          )
+
+      toeicTestsList.forEach((t: any) => {
+        const year = t.book
+        const testNum = t.test_number
+        if (!anySkillSelected || appliedSkills.listening) {
+          list.push({
+            id: `ets-${year}-${testNum}-lc`,
+            type: 'toeic',
+            book: year,
+            testNum: testNum,
+            skill: 'listening',
+            label: `ETS TOEIC ${year}`,
+            title: `Practice Test ${testNum}`,
+            link: `/tests/ets/${year}/lc/${testNum}`
+          })
+        }
+        if (!anySkillSelected || appliedSkills.reading) {
+          list.push({
+            id: `ets-${year}-${testNum}-rc`,
+            type: 'toeic',
+            book: year,
+            testNum: testNum,
+            skill: 'reading',
+            label: `ETS TOEIC ${year}`,
+            title: `Practice Test ${testNum}`,
+            link: `/tests/ets/${year}/rc/${testNum}`
+          })
         }
       })
     }
@@ -233,7 +266,7 @@ function TestsContent() {
       if (a.testNum !== b.testNum) return a.testNum - b.testNum
       return a.skill.localeCompare(b.skill)
     })
-  }, [data, appliedType, appliedSkills])
+  }, [ieltsData, toeicData, appliedType, appliedSkills])
 
   return (
     <div className="tests-layout-container">
@@ -340,7 +373,7 @@ function TestsContent() {
 
       {/* 2. Right Side: Tests Content Grid */}
       <div className="tests-content-area">
-        {error && (
+        {(ieltsError || toeicError) && (
           <div className="home-error">
             ⚠️ Failed to load test library. Please ensure the backend server is running.
           </div>
@@ -354,7 +387,7 @@ function TestsContent() {
               <button className="btn-clear-badge" onClick={handleClearFilters}>Clear Filters ×</button>
             </div>
 
-            {isLoading && (
+            {(ieltsLoading || toeicLoading) && (
               <div className="book-grid">
                 {[1, 2, 3, 4].map(i => (
                   <div key={i} className="skeleton" style={{ height: '140px', borderRadius: 'var(--radius-lg)' }} />
@@ -362,7 +395,7 @@ function TestsContent() {
               </div>
             )}
 
-            {!isLoading && filteredIndividualTests.length === 0 ? (
+            {!(ieltsLoading || toeicLoading) && filteredIndividualTests.length === 0 ? (
               <div className="no-filtered-results">
                 <span>📂 No matching tests found. Try adjusting your filter checkboxes.</span>
               </div>
@@ -430,7 +463,7 @@ function TestsContent() {
                 <h2 className="choice-title">Select Cambridge IELTS Book</h2>
                 <p className="choice-subtitle">Select a book package to view individual test practices.</p>
                 
-                {isLoading && (
+                {ieltsLoading && (
                   <div className="book-choices-grid">
                     {[19, 18, 17, 16, 15, 14, 13, 12, 11].map(i => (
                       <div key={i} className="skeleton" style={{ height: '140px', borderRadius: 'var(--radius-lg)' }} />
@@ -438,7 +471,7 @@ function TestsContent() {
                   </div>
                 )}
 
-                {data && (
+                {ieltsData && (
                   <div className="book-choices-grid">
                     {sortedBooks.map((book) => (
                       <div 
@@ -461,26 +494,31 @@ function TestsContent() {
               <div className="book-selection-wrapper">
                 <h2 className="choice-title">Select ETS TOEIC Edition</h2>
                 <p className="choice-subtitle">Select an edition based on the release year to browse tests.</p>
-                <div className="book-choices-grid book-choices-grid--toeic">
-                  <div 
-                    className="book-choice-card book-choice-card--toeic"
-                    onClick={() => setSelectedToeicYear('2026')}
-                  >
-                    <div className="book-choice-card__badge">Hot</div>
-                    <div className="book-choice-card__icon">📘</div>
-                    <h3 className="book-choice-card__title">ETS 2026</h3>
-                    <p className="book-choice-card__subtitle">10 Tests (LC & RC)</p>
+                
+                {toeicLoading && (
+                  <div className="book-choices-grid book-choices-grid--toeic">
+                    {[2026, 2024].map(year => (
+                      <div key={year} className="skeleton" style={{ height: '140px', borderRadius: 'var(--radius-lg)' }} />
+                    ))}
                   </div>
-
-                  <div 
-                    className="book-choice-card book-choice-card--toeic"
-                    onClick={() => setSelectedToeicYear('2024')}
-                  >
-                    <div className="book-choice-card__icon">📘</div>
-                    <h3 className="book-choice-card__title">ETS 2024</h3>
-                    <p className="book-choice-card__subtitle">10 Tests (LC & RC)</p>
+                )}
+                
+                {!toeicLoading && (
+                  <div className="book-choices-grid book-choices-grid--toeic">
+                    {sortedToeicYears.map((year) => (
+                      <div 
+                        key={year}
+                        className="book-choice-card book-choice-card--toeic"
+                        onClick={() => setSelectedToeicYear(String(year) as any)}
+                      >
+                        {year === 2026 && <div className="book-choice-card__badge">Hot</div>}
+                        <div className="book-choice-card__icon">📘</div>
+                        <h3 className="book-choice-card__title">ETS {year}</h3>
+                        <p className="book-choice-card__subtitle">{toeicTestsByYear[year]?.length ?? 10} Tests (LC & RC)</p>
+                      </div>
+                    ))}
                   </div>
-                </div>
+                )}
               </div>
             )}
 
@@ -551,15 +589,18 @@ function TestsContent() {
                 </div>
 
                 <div className="book-grid" style={{ paddingLeft: 0, paddingRight: 0 }}>
-                  {Array.from({ length: 10 }, (_, i) => i + 1).map((testNum) => (
+                  {(toeicTestsByYear[Number(selectedToeicYear)] && toeicTestsByYear[Number(selectedToeicYear)].length > 0
+                    ? toeicTestsByYear[Number(selectedToeicYear)]
+                    : Array.from({ length: 10 }, (_, idx) => ({ test_number: idx + 1 }))
+                  ).map((t: any) => (
                     <div 
-                      key={testNum} 
+                      key={t.test_number} 
                       className="test-card slide-up clickable-test-card" 
-                      onClick={() => setActiveSkillModal({ bookOrYear: selectedToeicYear, testNum: testNum, examType: 'toeic' })}
+                      onClick={() => setActiveSkillModal({ bookOrYear: selectedToeicYear, testNum: t.test_number, examType: 'toeic' })}
                     >
                       <div className="test-card__header">
                         <div className="test-card__book">ETS TOEIC {selectedToeicYear}</div>
-                        <div className="test-card__title">Test {testNum}</div>
+                        <div className="test-card__title">Test {t.test_number}</div>
                       </div>
                       <div className="test-card__body">
                         <div className="test-card__skills-preview" style={{ justifyContent: 'center', gap: '16px', fontSize: '1.2rem' }}>

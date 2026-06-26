@@ -792,7 +792,7 @@ h1, h2, h3, h4, h5 {
 /* -------- 3-Column Split View for Reading -------- */
 .split-view-3 {
   display: grid;
-  grid-template-columns: 1.4fr 1px 1.4fr 1px 0.6fr;
+  grid-template-columns: 1.55fr 1px 1.55fr 1px 0.5fr;
   height: calc(100vh - 112px);
   overflow: hidden;
   background: var(--bg-primary);

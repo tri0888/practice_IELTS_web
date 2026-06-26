@@ -10,7 +10,7 @@ def admin_get_test_info(book: int, test: int):
     answers = get_test_answers_dict(book, test)
     audio = []
     if db.is_available():
-        coll = db.audio_collection()
+        coll = db.toeic_audio_collection() if book >= 2000 else db.audio_collection()
         if coll is not None:
             audio = list(coll.find({"book": book, "test_number": test}, {"_id": 0}))
     return {
@@ -24,7 +24,7 @@ def admin_get_test_info(book: int, test: int):
 def admin_update_layout(book: int, test: int, layout: dict):
     if not db.is_available():
         raise HTTPException(status_code=503, detail="DB not available")
-    coll = db.layouts_collection()
+    coll = db.toeic_layouts_collection() if book >= 2000 else db.layouts_collection()
     coll.update_one({"book": book, "test": test}, {"$set": {"layout": layout}}, upsert=True)
     
     # Clear stitched parts in-memory cache
@@ -35,14 +35,14 @@ def admin_update_layout(book: int, test: int, layout: dict):
 def admin_update_answers(book: int, test: int, answers: dict):
     if not db.is_available():
         raise HTTPException(status_code=503, detail="DB not available")
-    coll = db.answers_collection()
+    coll = db.toeic_answers_collection() if book >= 2000 else db.answers_collection()
     coll.update_one({"book": book, "test": test}, {"$set": {"answers": answers}}, upsert=True)
     return {"status": "ok"}
 
 def admin_update_audio(book: int, test: int, audio_assets: list):
     if not db.is_available():
         raise HTTPException(status_code=503, detail="DB not available")
-    coll = db.audio_collection()
+    coll = db.toeic_audio_collection() if book >= 2000 else db.audio_collection()
     coll.delete_many({"book": book, "test_number": test})
     for a in audio_assets:
         # Avoid mutating MongoDB _id key if it exists in input
