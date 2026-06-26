@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse, StreamingResponse
 from pathlib import Path
+from app.modules.auth.middleware import require_approved
 from app.modules.r2_client import is_local_file, get_local_file_path, get_r2_file_stream, is_r2_enabled
 from . import services
 
-router = APIRouter(prefix="/api/tests", tags=["Tests"])
+router = APIRouter(prefix="/api/tests", tags=["Tests"], dependencies=[Depends(require_approved)])
 
 @router.get("")
 def list_tests():
@@ -87,5 +88,4 @@ def get_test_audio(book: int, test: int):
 @router.get("/{book}/{test}/{skill}")
 def get_skill(book: int, test: int, skill: str):
     return services.get_skill(book, test, skill)
-
 

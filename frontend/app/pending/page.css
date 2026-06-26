@@ -1,0 +1,39 @@
+.pending-shell {
+  background:
+    radial-gradient(circle at 80% 18%, rgba(245, 158, 11, 0.18), transparent 28%),
+    linear-gradient(135deg, #111827 0%, #263142 48%, #f8fafc 48%, #eef2f7 100%);
+}
+
+.pending-panel {
+  text-align: center;
+}
+
+.pending-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 18px;
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  font-size: 1.4rem;
+  font-weight: 900;
+}
+
+.pending-panel h1 {
+  margin: 0 0 10px;
+  font-size: 1.45rem;
+  letter-spacing: 0;
+}
+
+.pending-panel p {
+  color: var(--text-secondary);
+  line-height: 1.65;
+  margin: 0 0 22px;
+}
+
+.pending-logout {
+  width: 100%;
+}

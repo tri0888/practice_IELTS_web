@@ -15,6 +15,70 @@
   flex-grow: 1;
 }
 
+.auth-loading-screen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: var(--bg-primary);
+}
+
+.auth-loading-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  background: white;
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-md);
+  font-weight: 700;
+}
+
+.auth-loading-mark {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--ielts-red);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.header-user-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 14px;
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.85rem;
+  max-width: 280px;
+}
+
+.header-user-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.header-user-chip button {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 7px 10px;
+}
+
+.header-user-chip button:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
 /* Sidebar & Dashboard Layout Rules */
 .homepage-container {
   display: flex;

@@ -1,5 +1,6 @@
 import './globals.css'
 import AppLayout from '@/components/AppLayout/AppLayout'
+import { AuthProvider } from '@/components/AuthProvider/AuthProvider'
 
 export const metadata = {
   title: 'Cambridge Practice Hub',
@@ -10,7 +11,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" data-scroll-behavior="smooth">
       <body>
-        <AppLayout>{children}</AppLayout>
+        <AuthProvider>
+          <AppLayout>{children}</AppLayout>
+        </AuthProvider>
       </body>
     </html>
   )

@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import PDFViewer from '@/components/PDFViewer/PDFViewer'
 import ResultModal from '@/components/ResultModal/ResultModal'
+import { getAuthUrl } from '@/components/AuthProvider/AuthProvider'
 import './page.css'
 
 const BACKEND = '/api'
@@ -320,7 +321,7 @@ export default function ListeningPracticePage() {
             </div>
             <audio controls preload="none" className="listening-audio-el" key={activeSection}>
               <source
-                src={`${BACKEND}/audio/${encodeURIComponent(sections[activeSection].audio_file)}`}
+                src={getAuthUrl(`${BACKEND}/audio/${encodeURIComponent(sections[activeSection].audio_file)}`)}
                 type="audio/mpeg"
               />
             </audio>

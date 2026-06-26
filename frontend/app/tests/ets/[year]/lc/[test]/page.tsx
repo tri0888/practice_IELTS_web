@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import ResultModal from '@/components/ResultModal/ResultModal'
 import PDFViewer from '@/components/PDFViewer/PDFViewer'
+import { getAuthUrl } from '@/components/AuthProvider/AuthProvider'
 import './page.css'
 
 const BACKEND = '/api'
@@ -158,7 +159,7 @@ export default function ETSListeningPracticePage() {
     const file = getAudioFile(qNum)
     if (!file) return
 
-    const audioUrl = `${BACKEND}/tests/ets/${year}/audio-file/${test}/${encodeURIComponent(file)}`
+    const audioUrl = getAuthUrl(`${BACKEND}/tests/ets/${year}/audio-file/${test}/${encodeURIComponent(file)}`)
     
     if (playingQuestion === qNum) {
       // Toggle play/pause

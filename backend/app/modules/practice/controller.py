@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Response, HTTPException
+from fastapi import APIRouter, Depends, Response, HTTPException
+from app.modules.auth.middleware import require_approved
 from . import services
 
-router = APIRouter(tags=["Practice"])
+router = APIRouter(tags=["Practice"], dependencies=[Depends(require_approved)])
 
 @router.get("/api/tests/{book}/{test}/practice")
 def get_practice_layout(book: int, test: int):
@@ -54,4 +55,3 @@ def get_pdf_page_file(book: int, pdf_type: str, page_number: int, test: int = 1)
         return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-

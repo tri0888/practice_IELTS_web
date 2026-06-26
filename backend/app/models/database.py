@@ -72,6 +72,9 @@ def tests_collection():
 def histories_collection():
     return _db["histories"] if _db is not None else None
 
+def users_collection():
+    return _db["users"] if _db is not None else None
+
 def audio_collection():
     return _db["ielts_audio_assets"] if _db is not None else None
 
@@ -93,4 +96,3 @@ def toeic_layouts_collection():
 
 def toeic_answers_collection():
     return _db["toeic_answers"] if _db is not None else None
-
