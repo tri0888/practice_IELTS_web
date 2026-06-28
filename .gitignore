@@ -4,5 +4,5 @@ node_modules
 __pycache__
 .next
 .cache\
-.agent
+.agents
 .env

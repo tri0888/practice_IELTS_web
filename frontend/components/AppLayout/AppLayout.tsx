@@ -33,6 +33,15 @@ function SidebarMenu() {
         <span className="sidebar-menu-label">Dashboard</span>
       </Link>
 
+      <Link
+        href="/vocabulary"
+        className={`sidebar-menu-btn ${pathname.startsWith('/vocabulary') ? 'active' : ''}`}
+        style={{ textDecoration: 'none' }}
+      >
+        <span className="sidebar-menu-icon">V</span>
+        <span className="sidebar-menu-label">Vocabulary</span>
+      </Link>
+
       <div className="sidebar-submenu-container">
         <Link
           href="/tests"
@@ -107,7 +116,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
   }
 
   const isPracticePage = pathname.includes('/practice') || pathname.includes('/ets/')
-  const showSidebar = !isPracticePage && (pathname === '/Home' || pathname.startsWith('/tests') || pathname.startsWith('/history'))
+  const showSidebar = !isPracticePage && (pathname === '/Home' || pathname.startsWith('/tests') || pathname.startsWith('/history') || pathname.startsWith('/vocabulary'))
+
 
   return (
     <div className="app-layout-wrapper">

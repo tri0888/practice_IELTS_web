@@ -31,7 +31,7 @@ def stream_audio(file_name: str) -> str:
                     
     repo_root = Path(__file__).resolve().parents[4]
     books_dir = repo_root / "Books"
-    from app.modules.r2_client import is_r2_enabled, find_key_on_r2
+    from app.modules.r2_client import is_r2_enabled
     
     # In local mode, or if not found in database: scan local filesystem
     if not relative_path and not is_r2_enabled():
@@ -48,11 +48,9 @@ def stream_audio(file_name: str) -> str:
                         relative_path = p.relative_to(repo_root).as_posix()
                         break
                         
-    # If not found locally, and R2 is enabled: search on R2
+    # If not found locally/DB, and R2 is enabled: use file_name directly as key
     if not relative_path and is_r2_enabled():
-        matched_key = find_key_on_r2(file_name)
-        if matched_key:
-            return matched_key
+        relative_path = file_name
 
     if not relative_path:
         raise HTTPException(status_code=404, detail=f"Audio file {file_name} not found")

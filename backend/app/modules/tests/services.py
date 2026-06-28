@@ -32,9 +32,21 @@ def find_book_pdf_path(book: int, pdf_type: str = "academic") -> str:
 
 def list_tests():
     if db.is_available():
-        coll = db.tests_collection()
+        coll = db.layouts_collection()
         if coll is not None:
-            return list(coll.find({}, {"book": 1, "test_number": 1, "sections": 1, "_id": 0}))
+            docs = list(coll.find({}, {"book": 1, "test": 1, "layout": 1, "_id": 0}))
+            results = []
+            for doc in docs:
+                book = doc.get("book")
+                test_number = doc.get("test")
+                layout = doc.get("layout", {})
+                sections = [{"name": skill} for skill in ["listening", "reading", "writing", "speaking"] if skill in layout]
+                results.append({
+                    "book": book,
+                    "test_number": test_number,
+                    "sections": sections
+                })
+            return results
     return []
 
 def get_pdf_page_count(book: int, pdf_type: str = "academic"):
@@ -53,11 +65,17 @@ def get_pdf_page_count(book: int, pdf_type: str = "academic"):
 
 def get_test(book: int, test: int):
     if db.is_available():
-        coll = db.tests_collection()
+        coll = db.layouts_collection()
         if coll is not None:
-            doc = coll.find_one({"book": book, "test_number": test}, {"_id": 0})
+            doc = coll.find_one({"book": book, "test": test}, {"_id": 0})
             if doc:
-                return doc
+                layout = doc.get("layout", {})
+                sections = [{"name": skill} for skill in ["listening", "reading", "writing", "speaking"] if skill in layout]
+                return {
+                    "book": book,
+                    "test_number": test,
+                    "sections": sections
+                }
     raise HTTPException(status_code=404, detail="test not found")
 def get_test_audio(book: int, test: int):
     if db.is_available():
@@ -175,9 +193,22 @@ def get_ets_answers(pdf_type: str, test_number: int, year: str = "2026") -> dict
     return {"test": test_number, "type": pdf_type, "answers": {}}
 
 def list_toeic_tests() -> list:
-    coll = db.toeic_tests_collection()
-    if coll is not None:
-        return list(coll.find({}, {"book": 1, "test_number": 1, "sections": 1, "_id": 0}))
+    if db.is_available():
+        coll = db.toeic_layouts_collection()
+        if coll is not None:
+            docs = list(coll.find({}, {"book": 1, "test": 1, "layout": 1, "_id": 0}))
+            results = []
+            for doc in docs:
+                book = doc.get("book")
+                test_number = doc.get("test")
+                layout = doc.get("layout", {})
+                sections = [{"name": skill} for skill in ["listening", "reading"] if skill in layout]
+                results.append({
+                    "book": book,
+                    "test_number": test_number,
+                    "sections": sections
+                })
+            return results
     return []
 
 

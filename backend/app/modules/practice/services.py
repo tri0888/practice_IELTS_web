@@ -28,6 +28,31 @@ def load_ets_layouts() -> dict:
             print(f"Error loading ETS layout JSON: {e}")
     return {}
 
+import threading
+
+_pdf_cache = {}
+_download_lock = threading.Lock()
+
+def get_pdf_bytes_cached(pdf_key: str) -> bytes:
+    if pdf_key in _pdf_cache:
+        return _pdf_cache[pdf_key]
+        
+    with _download_lock:
+        if pdf_key in _pdf_cache:
+            return _pdf_cache[pdf_key]
+            
+        from app.modules.r2_client import is_r2_enabled
+        if is_r2_enabled():
+            from app.modules.r2_client import get_r2_file_stream
+            stream, _ = get_r2_file_stream(pdf_key)
+            data = stream.read()
+        else:
+            from app.modules.r2_client import get_file_bytes
+            data = get_file_bytes(pdf_key)
+            
+        _pdf_cache[pdf_key] = data
+        return data
+
 def get_practice_layout_dict(book: int, test: int):
     if db.is_available():
         if book >= 2000:
@@ -89,10 +114,9 @@ def get_test_answers_dict(book: int, test: int, skill: str = None) -> dict:
 
 @lru_cache(maxsize=128)
 def get_pdf_page_bytes(book: int, page_number: int, pdf_type: str = "academic") -> bytes:
-    from app.modules.r2_client import get_file_bytes
     try:
         pdf_key = find_book_pdf_path(book, pdf_type)
-        pdf_bytes = get_file_bytes(pdf_key)
+        pdf_bytes = get_pdf_bytes_cached(pdf_key)
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
@@ -151,10 +175,9 @@ def get_pdf_part_bytes(book: int, pdf_type: str, test: int, part_key: str) -> by
     if not pages:
         raise HTTPException(status_code=404, detail=f"Part {part_key} not mapped or found for Book {book} Test {test}")
 
-    from app.modules.r2_client import get_file_bytes
     try:
         pdf_key = find_book_pdf_path(book, pdf_type)
-        pdf_bytes = get_file_bytes(pdf_key)
+        pdf_bytes = get_pdf_bytes_cached(pdf_key)
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
@@ -256,8 +279,7 @@ def get_pdf_part_file(book: int, pdf_type: str, test: int, part_key: str) -> byt
             pdf_key = get_ets_pdf_path(pdf_type, test, str(book))
         else:
             pdf_key = find_book_pdf_path(book, pdf_type)
-        from app.modules.r2_client import get_file_bytes
-        pdf_bytes = get_file_bytes(pdf_key)
+        pdf_bytes = get_pdf_bytes_cached(pdf_key)
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e
@@ -285,8 +307,7 @@ def get_pdf_page_file(book: int, page_number: int, pdf_type: str = "academic", t
             pdf_key = get_ets_pdf_path(pdf_type, test, str(book))
         else:
             pdf_key = find_book_pdf_path(book, pdf_type)
-        from app.modules.r2_client import get_file_bytes
-        pdf_bytes = get_file_bytes(pdf_key)
+        pdf_bytes = get_pdf_bytes_cached(pdf_key)
     except Exception as e:
         if isinstance(e, HTTPException):
             raise e

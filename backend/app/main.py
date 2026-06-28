@@ -9,6 +9,7 @@ from app.modules.practice import router as practice_router
 from app.modules.attempts import router as attempts_router
 from app.modules.audio import router as audio_router
 from app.modules.r2_client import router as r2_client_router
+from app.modules.vocabulary import router as vocabulary_router
 
 app = FastAPI(title="IELTS Platform API", version="1.0.0")
 
@@ -28,6 +29,8 @@ app.include_router(tests_router)
 app.include_router(attempts_router)
 app.include_router(audio_router)
 app.include_router(r2_client_router)
+app.include_router(vocabulary_router)
+
 
 @app.on_event("startup")
 def startup_event():

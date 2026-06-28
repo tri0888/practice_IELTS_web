@@ -6,6 +6,5 @@ from .services import (
     get_local_file_path,
     get_r2_file_stream,
     get_file_bytes,
-    find_key_on_r2,
 )
 from .controller import router

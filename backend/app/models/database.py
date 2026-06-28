@@ -1,10 +1,12 @@
 import os
 import re
+from pathlib import Path
 from pymongo import MongoClient, errors
 from dotenv import load_dotenv
 
-# Load environment variables from .env
-load_dotenv()
+# Load environment variables from backend/.env
+backend_dir = Path(__file__).resolve().parents[2]
+load_dotenv(dotenv_path=backend_dir / ".env")
 
 def get_formatted_mongodb_uri():
     uri = os.getenv("MONGODB_URI")
@@ -66,8 +68,8 @@ _db = _client[DB_NAME] if _client is not None else None
 def is_available() -> bool:
     return _db is not None
 
-def tests_collection():
-    return _db["ielts_tests"] if _db is not None else None
+def r2_keys_collection():
+    return _db["r2_keys"] if _db is not None else None
 
 def histories_collection():
     return _db["histories"] if _db is not None else None
@@ -85,9 +87,6 @@ def answers_collection():
     return _db["ielts_answers"] if _db is not None else None
 
 # TOEIC collections
-def toeic_tests_collection():
-    return _db["toeic_tests"] if _db is not None else None
-
 def toeic_audio_collection():
     return _db["toeic_audio_assets"] if _db is not None else None
 
@@ -96,3 +95,10 @@ def toeic_layouts_collection():
 
 def toeic_answers_collection():
     return _db["toeic_answers"] if _db is not None else None
+
+def vocabulary_progress_collection():
+    return _db["vocabulary_progress"] if _db is not None else None
+
+def vocabulary_collection():
+    return _db["vocabulary"] if _db is not None else None
+
