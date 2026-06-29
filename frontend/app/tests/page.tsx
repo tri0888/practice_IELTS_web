@@ -245,9 +245,9 @@ function TestsContent() {
             book: year,
             testNum: testNum,
             skill: 'listening',
-            label: `ETS TOEIC ${year}`,
+            label: `TOEIC ${year}`,
             title: `Practice Test ${testNum}`,
-            link: `/tests/ets/${year}/lc/${testNum}`
+            link: `/tests/toeic/${year}/lc/${testNum}`
           })
         }
         if (!anySkillSelected || appliedSkills.reading) {
@@ -257,9 +257,9 @@ function TestsContent() {
             book: year,
             testNum: testNum,
             skill: 'reading',
-            label: `ETS TOEIC ${year}`,
+            label: `TOEIC ${year}`,
             title: `Practice Test ${testNum}`,
-            link: `/tests/ets/${year}/rc/${testNum}`
+            link: `/tests/toeic/${year}/rc/${testNum}`
           })
         }
       })
@@ -711,7 +711,7 @@ function TestsContent() {
                 /* TOEIC Skills Grid (LC & RC) inside Modal */
                 <div className="modal-skills-grid modal-skills-grid--toeic">
                   <Link
-                    href={`/tests/ets/${activeSkillModal.bookOrYear}/lc/${activeSkillModal.testNum}`}
+                    href={`/tests/toeic/${activeSkillModal.bookOrYear}/lc/${activeSkillModal.testNum}`}
                     style={{ textDecoration: 'none', color: 'inherit', flex: 1 }}
                   >
                     <div className="modal-skill-card" style={{ borderLeftColor: '#3b82f6', height: '100%' }}>
@@ -725,7 +725,7 @@ function TestsContent() {
                   </Link>
 
                   <Link
-                    href={`/tests/ets/${activeSkillModal.bookOrYear}/rc/${activeSkillModal.testNum}`}
+                    href={`/tests/toeic/${activeSkillModal.bookOrYear}/rc/${activeSkillModal.testNum}`}
                     style={{ textDecoration: 'none', color: 'inherit', flex: 1 }}
                   >
                     <div className="modal-skill-card" style={{ borderLeftColor: '#22c55e', height: '100%' }}>

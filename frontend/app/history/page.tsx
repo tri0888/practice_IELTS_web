@@ -9,8 +9,8 @@ const getPartKeyForQuestion = (q: number | null, skill: string): string => {
   if (!skill) return ''
   const s = skill.toLowerCase()
   if (q === null) {
-    if (s === 'listening' || s === 'ets_lc') return 'listening_all'
-    if (s === 'reading' || s === 'ets_rc') return 'reading_all'
+    if (s === 'listening' || s === 'toeic_lc') return 'listening_all'
+    if (s === 'reading' || s === 'toeic_rc') return 'reading_all'
     if (s === 'writing') return 'writing_1'
     if (s === 'speaking') return 'speaking'
     return ''
@@ -27,13 +27,13 @@ const getPartKeyForQuestion = (q: number | null, skill: string): string => {
     if (q >= 14 && q <= 26) return 'reading_2'
     return 'reading_3'
   }
-  if (s === 'ets_lc') {
+  if (s === 'toeic_lc') {
     if (q >= 1 && q <= 6) return 'listening_1'
     if (q >= 7 && q <= 31) return 'listening_2'
     if (q >= 32 && q <= 70) return 'listening_3'
     return 'listening_4'
   }
-  if (s === 'ets_rc') {
+  if (s === 'toeic_rc') {
     if (q >= 101 && q <= 130) return 'reading_5'
     if (q >= 131 && q <= 146) return 'reading_6'
     return 'reading_7'
@@ -91,13 +91,13 @@ function checkAnswerCorrect(userAns: string | undefined, correctAnsStr: string |
 }
 
 export default function HistoryPage() {
-  const { data: attempts, mutate: mutateAttempts, isLoading } = useSWR('/api/attempts', fetcher)
+  const { data: attempts, mutate: mutateAttempts, isLoading } = useSWR('/api/histories', fetcher)
   const [selectedAttemptId, setSelectedAttemptId] = useState<string | null>(null)
   const [selectedQNum, setSelectedQNum] = useState<number | null>(null)
   
   // Fetch detail for selected attempt
   const { data: detail, isLoading: detailLoading } = useSWR(
-    selectedAttemptId ? `/api/attempts/${selectedAttemptId}/result` : null,
+    selectedAttemptId ? `/api/histories/${selectedAttemptId}/result` : null,
     fetcher
   )
 
@@ -118,7 +118,7 @@ export default function HistoryPage() {
     e.stopPropagation()
     if (window.confirm("Are you sure you want to delete this test attempt from your history?")) {
       try {
-        const resp = await fetch(`/api/attempts/${attemptId}`, { method: 'DELETE' })
+        const resp = await fetch(`/api/histories/${attemptId}`, { method: 'DELETE' })
         if (resp.ok) {
           mutateAttempts()
           if (selectedAttemptId === attemptId) {
@@ -150,15 +150,15 @@ export default function HistoryPage() {
     if (skill === 'reading') return '📖 IELTS Reading'
     if (skill === 'writing') return '✍️ IELTS Writing'
     if (skill === 'speaking') return '🎙️ IELTS Speaking'
-    if (skill === 'ets_lc') return '🎧 TOEIC Listening (LC)'
-    if (skill === 'ets_rc') return '📖 TOEIC Reading (RC)'
+    if (skill === 'toeic_lc') return '🎧 TOEIC Listening (LC)'
+    if (skill === 'toeic_rc') return '📖 TOEIC Reading (RC)'
     return skill
   }
 
   const formatTestName = (att: any) => {
     if (!att || !att.skill) return ''
-    if (att.skill.startsWith('ets_')) {
-      return `ETS ${att.book} — Test ${att.test}`
+    if (att.skill.startsWith('toeic_')) {
+      return `TOEIC ${att.book} — Test ${att.test}`
     } else {
       return `Cam ${att.book} — Test ${att.test}`
     }
@@ -167,10 +167,10 @@ export default function HistoryPage() {
   const getQuestionNumbers = (skill: string) => {
     if (!skill) return []
     const s = skill.toLowerCase()
-    if (s === 'ets_rc') {
+    if (s === 'toeic_rc') {
       return Array.from({ length: 100 }, (_, i) => i + 101)
     }
-    if (s === 'ets_lc') {
+    if (s === 'toeic_lc') {
       return Array.from({ length: 100 }, (_, i) => i + 1)
     }
     return Array.from({ length: 40 }, (_, i) => i + 1)
@@ -250,7 +250,7 @@ export default function HistoryPage() {
           {!isLoading && completedAttempts.map((att: any) => {
             const isGraded = att.result && typeof att.result.correct === 'number'
             const percent = isGraded ? Math.round((att.result.correct / att.result.total) * 100) : null
-            const isToeic = att.skill && att.skill.startsWith('ets_')
+            const isToeic = att.skill && att.skill.startsWith('toeic_')
             const isSelected = selectedAttemptId === att.id
 
             return (
@@ -280,8 +280,8 @@ export default function HistoryPage() {
                     <span 
                       className="history-card-score-badge"
                       style={{
-                        background: att.skill && att.skill.startsWith('ets_') ? '#f0fdf4' : '#fef2f2',
-                        color: att.skill && att.skill.startsWith('ets_') ? '#16a34a' : '#dc2626'
+                        background: att.skill && att.skill.startsWith('toeic_') ? '#f0fdf4' : '#fef2f2',
+                        color: att.skill && att.skill.startsWith('toeic_') ? '#16a34a' : '#dc2626'
                       }}
                     >
                       {att.result.correct}/{att.result.total} ({percent}%)
@@ -322,7 +322,7 @@ export default function HistoryPage() {
                 <PDFViewer
                   book={detail.book}
                   test={detail.test}
-                  pdfType={detail.skill.startsWith('ets_') ? (detail.skill === 'ets_lc' ? 'lc' : 'rc') : 'academic'}
+                  pdfType={detail.skill.startsWith('toeic_') ? (detail.skill === 'toeic_lc' ? 'lc' : 'rc') : 'academic'}
                   partKey={getPartKeyForQuestion(selectedQNum, detail.skill)}
                   pages={[]}
                   style={{ height: '100%', width: '100%', padding: 0 }}

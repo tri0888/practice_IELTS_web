@@ -18,23 +18,7 @@ def get_test_answers(book: int, test: int, skill: str = None):
          raise HTTPException(status_code=404, detail="Answers not found")
     return {"book": book, "test": test, "answers": answers}
 
-@router.get("/api/pdf-pages/{book}/{pdf_type}/{page_number}.png")
-def get_pdf_page_image_typed(book: int, pdf_type: str, page_number: int):
-    try:
-        png_bytes = services.get_pdf_page_bytes(book, page_number, pdf_type)
-        return Response(content=png_bytes, media_type="image/png")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/api/pdf-parts/{book}/{pdf_type}/{test}/{part_key}.png")
-def get_pdf_part_image(book: int, pdf_type: str, test: int, part_key: str):
-    try:
-         png_bytes = services.get_pdf_part_bytes(book, pdf_type, test, part_key)
-         return Response(content=png_bytes, media_type="image/png")
-    except HTTPException as he:
-         raise he
-    except Exception as e:
-         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/api/tests/{book}/pdf-parts/{pdf_type}/{test}/{part_key}")
 def get_pdf_part_file(book: int, pdf_type: str, test: int, part_key: str):

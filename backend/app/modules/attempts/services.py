@@ -82,8 +82,8 @@ def get_result(attempt_id: str):
         for q in range(1, 41):
             ans = get_correct_answer_for_question(q, correct)
             correct_answers[str(q)] = ans
-    elif skill in ("ets_lc", "ets_rc"):
-        pdf_type = "lc" if skill == "ets_lc" else "rc"
+    elif skill in ("toeic_lc", "toeic_rc"):
+        pdf_type = "lc" if skill == "toeic_lc" else "rc"
         year = str(attempt.get("book", "2026"))
         ans_data = get_ets_answers(pdf_type, attempt.get("test", 1), year)
         correct = ans_data.get("answers", {})
@@ -125,8 +125,8 @@ def _grade_attempt(attempt: dict, responses: list) -> dict:
             except Exception:
                 pass
         return {"total": total, "correct": right}
-    elif skill in ("ets_lc", "ets_rc"):
-        pdf_type = "lc" if skill == "ets_lc" else "rc"
+    elif skill in ("toeic_lc", "toeic_rc"):
+        pdf_type = "lc" if skill == "toeic_lc" else "rc"
         year = str(attempt.get("book", "2026"))
         ans_data = get_ets_answers(pdf_type, attempt.get("test", 1), year)
         correct = ans_data.get("answers", {})

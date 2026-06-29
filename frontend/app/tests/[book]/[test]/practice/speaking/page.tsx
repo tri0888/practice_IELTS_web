@@ -70,7 +70,7 @@ export default function SpeakingPracticePage() {
         }
 
         // Create attempt
-        const attemptResp = await fetch(`${BACKEND}/attempts`, {
+        const attemptResp = await fetch(`${BACKEND}/histories`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ book: Number(book), test: Number(test), skill: 'speaking' }),
@@ -230,7 +230,7 @@ export default function SpeakingPracticePage() {
     ]
 
     try {
-      await fetch(`${BACKEND}/attempts/${attemptId}/submit`, {
+      await fetch(`${BACKEND}/histories/${attemptId}/submit`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ responses }),

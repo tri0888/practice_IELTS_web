@@ -148,7 +148,7 @@ export default function ReadingPracticePage() {
         }
 
         // Create attempt
-        const attemptResp = await fetch(`${BACKEND}/attempts`, {
+        const attemptResp = await fetch(`${BACKEND}/histories`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ book: Number(book), test: Number(test), skill: 'reading' }),
@@ -287,7 +287,7 @@ export default function ReadingPracticePage() {
 
     try {
       const [submitResp, answerResp] = await Promise.all([
-        fetch(`${BACKEND}/attempts/${attemptId}/submit`, {
+        fetch(`${BACKEND}/histories/${attemptId}/submit`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ responses }),

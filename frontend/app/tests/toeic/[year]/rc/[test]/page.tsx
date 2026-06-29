@@ -5,30 +5,23 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import ResultModal from '@/components/ResultModal/ResultModal'
 import PDFViewer from '@/components/PDFViewer/PDFViewer'
-import { getAuthUrl } from '@/components/AuthProvider/AuthProvider'
 import './page.css'
 
 const BACKEND = '/api'
-const DURATION_SECONDS = 45 * 60 // 45 minutes for TOEIC LC
+const DURATION_SECONDS = 75 * 60 // 75 minutes for TOEIC RC
 
-type ActivePart = 'part1' | 'part2' | 'part3' | 'part4'
+type ActivePart = 'part5' | 'part6' | 'part7'
 
-export default function ETSListeningPracticePage() {
+export default function ETSReadingPracticePage() {
   const params = useParams<{ year: string; test: string }>()
   const year = params?.year ?? '2026'
   const test = params?.test ?? '1'
 
-  const [audioFiles, setAudioFiles] = useState<string[]>([])
   const [answers, setAnswers] = useState<Record<number, string>>({})
   const [timeLeft, setTimeLeft] = useState(DURATION_SECONDS)
   const [isSubmitted, setIsSubmitted] = useState(false)
-  const [activePart, setActivePart] = useState<ActivePart>('part1')
+  const [activePart, setActivePart] = useState<ActivePart>('part5')
   const [loading, setLoading] = useState(true)
-
-  // Audio Playback State
-  const [currentAudio, setCurrentAudio] = useState<string | null>(null)
-  const [playingQuestion, setPlayingQuestion] = useState<number | null>(null)
-  const audioPlayerRef = useRef<HTMLAudioElement | null>(null)
 
   const [showResult, setShowResult] = useState(false)
   const [correctCount, setCorrectCount] = useState(0)
@@ -36,21 +29,13 @@ export default function ETSListeningPracticePage() {
   const [attemptId, setAttemptId] = useState<string | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Load Audios and Answers
+  // Load answers key placeholder
   useEffect(() => {
     let cancelled = false
     async function initData() {
       try {
-        // Fetch audio list
-        const audioResp = await fetch(`${BACKEND}/tests/ets/${year}/audio/${test}`)
-        if (audioResp.ok) {
-          const files = await audioResp.json()
-          if (!cancelled) setAudioFiles(files)
-        }
-
-        // Fetch answer key placeholder or actual answers if available
         try {
-          const ansResp = await fetch(`${BACKEND}/tests/ets/${year}/answers/lc/${test}`)
+          const ansResp = await fetch(`${BACKEND}/tests/toeic/${year}/answers/rc/${test}`)
           if (ansResp.ok) {
             const data = await ansResp.json()
             if (!cancelled && data && data.answers) {
@@ -63,10 +48,10 @@ export default function ETSListeningPracticePage() {
 
         // Create attempt in DB
         try {
-          const attemptResp = await fetch(`${BACKEND}/attempts`, {
+          const attemptResp = await fetch(`${BACKEND}/histories`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ book: parseInt(year, 10), test: parseInt(test, 10), skill: 'ets_lc' })
+            body: JSON.stringify({ book: parseInt(year, 10), test: parseInt(test, 10), skill: 'toeic_rc' })
           })
           if (attemptResp.ok) {
             const att = await attemptResp.json()
@@ -79,9 +64,9 @@ export default function ETSListeningPracticePage() {
         }
 
         if (!cancelled) {
-          // Initialize answers for 1 to 100
+          // Initialize answers for 101 to 200
           const initialAnswers: Record<number, string> = {}
-          for (let i = 1; i <= 100; i++) {
+          for (let i = 101; i <= 200; i++) {
             initialAnswers[i] = ''
           }
           setAnswers(initialAnswers)
@@ -125,61 +110,6 @@ export default function ETSListeningPracticePage() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
   }
 
-  // Helper to map question to its audio file
-  const getAudioFile = (qNum: number) => {
-    if (!audioFiles || audioFiles.length === 0) return null
-    for (const file of audioFiles) {
-      const base = file.replace('.mp3', '')
-      const parts = base.split('-')
-      if (parts.length < 2) continue
-
-      const lastPart = parts[parts.length - 1]
-      const secondLastPart = parts[parts.length - 2]
-
-      const lastNum = parseInt(lastPart, 10)
-      const secondLastNum = parseInt(secondLastPart, 10)
-
-      if (!isNaN(lastNum) && !isNaN(secondLastNum)) {
-        // It's a range like "32-34"
-        if (qNum >= secondLastNum && qNum <= lastNum) {
-          return file
-        }
-      } else if (!isNaN(lastNum)) {
-        // It's a single question like "01"
-        if (lastNum === qNum) {
-          return file
-        }
-      }
-    }
-    return null
-  }
-
-  // Play audio for a question
-  const handlePlayAudio = (qNum: number) => {
-    const file = getAudioFile(qNum)
-    if (!file) return
-
-    const audioUrl = getAuthUrl(`${BACKEND}/tests/ets/${year}/audio-file/${test}/${encodeURIComponent(file)}`)
-    
-    if (playingQuestion === qNum) {
-      // Toggle play/pause
-      if (audioPlayerRef.current) {
-        if (audioPlayerRef.current.paused) {
-          audioPlayerRef.current.play()
-        } else {
-          audioPlayerRef.current.pause()
-        }
-      }
-    } else {
-      setCurrentAudio(file)
-      setPlayingQuestion(qNum)
-      if (audioPlayerRef.current) {
-        audioPlayerRef.current.src = audioUrl
-        audioPlayerRef.current.play()
-      }
-    }
-  }
-
   const handleOptionChange = (qNum: number, option: string) => {
     if (isSubmitted) return
     setAnswers(prev => ({ ...prev, [qNum]: option }))
@@ -191,35 +121,29 @@ export default function ETSListeningPracticePage() {
 
   // Filter questions by selected part
   const filteredQuestions = useMemo(() => {
-    const allQs = Array.from({ length: 100 }, (_, i) => i + 1)
+    const allQs = Array.from({ length: 100 }, (_, i) => i + 101)
 
-    if (activePart === 'part1') return allQs.filter(q => q >= 1 && q <= 6)
-    if (activePart === 'part2') return allQs.filter(q => q >= 7 && q <= 31)
-    if (activePart === 'part3') return allQs.filter(q => q >= 32 && q <= 70)
-    if (activePart === 'part4') return allQs.filter(q => q >= 71 && q <= 100)
+    if (activePart === 'part5') return allQs.filter(q => q >= 101 && q <= 130)
+    if (activePart === 'part6') return allQs.filter(q => q >= 131 && q <= 146)
+    if (activePart === 'part7') return allQs.filter(q => q >= 147 && q <= 200)
     return allQs
   }, [activePart])
 
   const getQuestionPartName = (q: number) => {
-    if (q >= 1 && q <= 6) return 'Part 1'
-    if (q >= 7 && q <= 31) return 'Part 2'
-    if (q >= 32 && q <= 70) return 'Part 3'
-    return 'Part 4'
+    if (q >= 101 && q <= 130) return 'Part 5'
+    if (q >= 131 && q <= 146) return 'Part 6'
+    return 'Part 7'
   }
 
   const handleSubmit = () => {
     setIsSubmitted(true)
     if (timerRef.current) clearInterval(timerRef.current)
-    if (audioPlayerRef.current) {
-      audioPlayerRef.current.pause()
-    }
-    setPlayingQuestion(null)
 
     // Calculate score if answerKey is available
     let score = 0
     let hasKeys = Object.keys(answerKey).length > 0
     if (hasKeys) {
-      for (let i = 1; i <= 100; i++) {
+      for (let i = 101; i <= 200; i++) {
         const userAns = answers[i]?.trim().toUpperCase()
         const correctAns = answerKey[String(i)]?.trim().toUpperCase()
         if (userAns && correctAns && userAns === correctAns) {
@@ -236,7 +160,7 @@ export default function ETSListeningPracticePage() {
         question_number: parseInt(qNum, 10),
         answer: ans
       }))
-      fetch(`${BACKEND}/attempts/${attemptId}/submit`, {
+      fetch(`${BACKEND}/histories/${attemptId}/submit`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ responses: submissionResponses })
@@ -247,9 +171,9 @@ export default function ETSListeningPracticePage() {
   if (loading) {
     return (
       <div className="container fade-in" style={{ textAlign: 'center', paddingTop: 80 }}>
-        <div style={{ fontSize: '2.5rem', marginBottom: 16 }}>🎧</div>
-        <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>Loading TOEIC Listening Test...</div>
-        <div style={{ color: 'var(--text-muted)', marginTop: 8 }}>Preparing audio files and materials...</div>
+        <div style={{ fontSize: '2.5rem', marginBottom: 16 }}>📖</div>
+        <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>Loading TOEIC Reading Test...</div>
+        <div style={{ color: 'var(--text-muted)', marginTop: 8 }}>Preparing test and materials...</div>
       </div>
     )
   }
@@ -257,9 +181,9 @@ export default function ETSListeningPracticePage() {
   return (
     <div className="fade-in">
       {/* Top Exam Bar */}
-      <div className="exam-bar">
+      <div className="exam-bar" style={{ borderBottomColor: 'var(--status-correct, #22c55e)' }}>
         <div className="exam-bar__info">
-          <span className="exam-bar__badge" style={{ background: '#3b82f6' }}>TOEIC LC</span>
+          <span className="exam-bar__badge" style={{ background: '#22c55e' }}>TOEIC RC</span>
           <span>ETS {year} — Test {test}</span>
           <span className="listening-answered-badge">
             {answeredCount}/100 completed
@@ -270,7 +194,7 @@ export default function ETSListeningPracticePage() {
             ⏱️ {formatTime(timeLeft)}
           </div>
           {!isSubmitted && (
-            <button className="btn btn-submit btn-sm" onClick={handleSubmit}>
+            <button className="btn btn-submit btn-sm" style={{ background: '#22c55e', borderColor: '#22c55e' }} onClick={handleSubmit}>
               Submit
             </button>
           )}
@@ -284,8 +208,8 @@ export default function ETSListeningPracticePage() {
           <PDFViewer
             book={year}
             test={parseInt(test, 10)}
-            pdfType="lc"
-            partKey={`listening_${activePart.replace('part', '')}`}
+            pdfType="rc"
+            partKey={`reading_${activePart.replace('part', '')}`}
             pages={[]}
             style={{ height: '100%', width: '100%', padding: 0 }}
           />
@@ -294,11 +218,11 @@ export default function ETSListeningPracticePage() {
         {/* Vertical Divider */}
         <div className="split-view__divider" />
 
-        {/* Right Panel: Answer Sheet & Media Controls */}
+        {/* Right Panel: Answer Sheet */}
         <div className="split-view__panel listening-split-panel" style={{ padding: '16px 12px 80px' }}>
           {/* Section Navigation Tabs */}
           <div className="section-tabs listening-tabs-wrapper">
-            {(['part1', 'part2', 'part3', 'part4'] as const).map(part => (
+            {(['part5', 'part6', 'part7'] as const).map(part => (
               <button
                 key={part}
                 className={`section-tab ${activePart === part ? 'section-tab--active' : ''}`}
@@ -310,37 +234,16 @@ export default function ETSListeningPracticePage() {
             ))}
           </div>
 
-          {/* Persistent Mini Audio Player */}
-          <div className="ets-audio-bar">
-            <div className="ets-audio-bar__header">
-              <span>🔊 Question Audio Player</span>
-              {currentAudio && (
-                <span style={{ color: '#2563eb', fontWeight: 600 }}>
-                  Playing: {currentAudio}
-                </span>
-              )}
-            </div>
-            <audio
-              ref={audioPlayerRef}
-              controls
-              className="ets-audio-bar__player"
-              onEnded={() => setPlayingQuestion(null)}
-            />
-          </div>
-
           {/* Answer Inputs Grid */}
           <div className="card" style={{ padding: '12px' }}>
             <h3 style={{ margin: '0 0 16px 0', fontSize: '1.1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>Answer Sheet</span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>* Part 2 has 3 choices (A-B-C)</span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>* Questions 101 to 200</span>
             </h3>
 
             <div className="ets-q-grid">
               {filteredQuestions.map(q => {
-                const hasAudio = !!getAudioFile(q)
-                const isPart2 = q >= 7 && q <= 31
-                const options = isPart2 ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D']
-                
+                const options = ['A', 'B', 'C', 'D']
                 const userAns = answers[q]
                 const correctAns = answerKey[String(q)]
                 const isCorrect = userAns === correctAns
@@ -358,18 +261,9 @@ export default function ETSListeningPracticePage() {
                         <span className="ets-q-card__num">Question {q}</span>
                         <span className="part-badge">{getQuestionPartName(q)}</span>
                       </div>
-                      
-                      {hasAudio && (
-                        <button
-                          className={`ets-q-card__audio-btn ${playingQuestion === q ? 'ets-q-card__audio-btn--playing' : ''}`}
-                          onClick={() => handlePlayAudio(q)}
-                        >
-                          {playingQuestion === q ? '⏸️ Pause' : '▶️ Listen'}
-                        </button>
-                      )}
                     </div>
 
-                    <div className={`ets-options-group ${isPart2 ? 'ets-options-group--3' : ''}`}>
+                    <div className="ets-options-group">
                       {options.map(opt => {
                         const optionId = `q-${q}-${opt}`
                         return (
@@ -418,7 +312,7 @@ export default function ETSListeningPracticePage() {
       <ResultModal
         isOpen={showResult}
         emoji="🎯"
-        title="TOEIC Listening Result"
+        title="TOEIC Reading Result"
         testNumber={test}
         correctCount={correctCount}
         totalCount={100}

@@ -3,7 +3,7 @@ from app.models.schemas import AttemptCreate, AttemptSubmit
 from app.modules.auth.middleware import require_approved
 from . import services
 
-router = APIRouter(prefix="/api/attempts", tags=["Attempts"], dependencies=[Depends(require_approved)])
+router = APIRouter(prefix="/api/histories", tags=["Attempts"], dependencies=[Depends(require_approved)])
 
 @router.post("")
 def start_attempt(a: AttemptCreate):

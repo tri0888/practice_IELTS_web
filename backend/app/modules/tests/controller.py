@@ -17,8 +17,8 @@ def list_toeic_tests():
 
 
 # Specific ETS routes (Must be defined before generic {book}/{test} parameters)
-@router.get("/ets/{year}/pdf/{pdf_type}/{test_number}")
-@router.get("/ets/pdf/{pdf_type}/{test_number}")
+@router.get("/toeic/{year}/pdf/{pdf_type}/{test_number}")
+@router.get("/toeic/pdf/{pdf_type}/{test_number}")
 def get_ets_pdf(pdf_type: str, test_number: int, year: str = "2026"):
     relative_key = services.get_ets_pdf_path(pdf_type, test_number, year)
     filename = Path(relative_key).name
@@ -33,13 +33,13 @@ def get_ets_pdf(pdf_type: str, test_number: int, year: str = "2026"):
     else:
         raise HTTPException(status_code=404, detail=f"ETS {year} {pdf_type.upper()} Test {test_number} PDF not found")
 
-@router.get("/ets/{year}/audio/{test_number}")
-@router.get("/ets/audio/{test_number}")
+@router.get("/toeic/{year}/audio/{test_number}")
+@router.get("/toeic/audio/{test_number}")
 def get_ets_audio_list(test_number: int, year: str = "2026"):
     return services.get_ets_audio_list(test_number, year)
 
-@router.get("/ets/{year}/audio-file/{test_number}/{file_name}")
-@router.get("/ets/audio-file/{test_number}/{file_name}")
+@router.get("/toeic/{year}/audio-file/{test_number}/{file_name}")
+@router.get("/toeic/audio-file/{test_number}/{file_name}")
 def get_ets_audio_file(test_number: int, file_name: str, year: str = "2026"):
     relative_key = services.get_ets_audio_file_path(test_number, file_name, year)
     if is_local_file(relative_key):
@@ -52,8 +52,8 @@ def get_ets_audio_file(test_number: int, file_name: str, year: str = "2026"):
     else:
         raise HTTPException(status_code=404, detail=f"ETS {year} Audio Test {test_number} File {file_name} not found")
 
-@router.get("/ets/{year}/answers/{pdf_type}/{test_number}")
-@router.get("/ets/answers/{pdf_type}/{test_number}")
+@router.get("/toeic/{year}/answers/{pdf_type}/{test_number}")
+@router.get("/toeic/answers/{pdf_type}/{test_number}")
 def get_ets_answers(pdf_type: str, test_number: int, year: str = "2026"):
     return services.get_ets_answers(pdf_type, test_number, year)
 

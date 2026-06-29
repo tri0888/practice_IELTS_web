@@ -115,7 +115,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     )
   }
 
-  const isPracticePage = pathname.includes('/practice') || pathname.includes('/ets/')
+  const isPracticePage = pathname.includes('/practice') || pathname.includes('/toeic/')
   const showSidebar = !isPracticePage && (pathname === '/Home' || pathname.startsWith('/tests') || pathname.startsWith('/history') || pathname.startsWith('/vocabulary'))
 
 

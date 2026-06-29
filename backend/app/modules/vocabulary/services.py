@@ -225,12 +225,6 @@ def get_practice_words(user_id: str, mode: str = "random", pos: str | None = Non
         ]
         random.shuffle(studied_candidates)
         selected_words = studied_candidates[:limit]
-        
-        # Fill rest with random unmastered words if under limit
-        if len(selected_words) < limit:
-            remaining = [item for item in eligible_words if item not in selected_words]
-            random.shuffle(remaining)
-            selected_words.extend(remaining[:(limit - len(selected_words))])
     else:
         # Select random words
         if len(eligible_words) >= limit:

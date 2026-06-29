@@ -7,7 +7,7 @@ const fetcher = (url: string) => fetch(url).then(r => r.json())
 
 export default function DashboardPage() {
   // Fetch attempt history
-  const { data: attempts, error } = useSWR('/api/attempts', fetcher)
+  const { data: attempts, error } = useSWR('/api/histories', fetcher)
 
   // Filter only graded attempts (attempts with results)
   const gradedAttempts = useMemo(() => {
@@ -19,13 +19,13 @@ export default function DashboardPage() {
     const totalCount = gradedAttempts.length
     
     // IELTS Attempts
-    const ieltsAttempts = gradedAttempts.filter(att => !att.skill.startsWith('ets_'))
+    const ieltsAttempts = gradedAttempts.filter(att => !att.skill.startsWith('toeic_'))
     const ieltsAvg = ieltsAttempts.length > 0
       ? Math.round(ieltsAttempts.reduce((acc, curr) => acc + (curr.result.correct / curr.result.total), 0) / ieltsAttempts.length * 100)
       : null
 
     // TOEIC Attempts
-    const toeicAttempts = gradedAttempts.filter(att => att.skill.startsWith('ets_'))
+    const toeicAttempts = gradedAttempts.filter(att => att.skill.startsWith('toeic_'))
     const toeicAvg = toeicAttempts.length > 0
       ? Math.round(toeicAttempts.reduce((acc, curr) => acc + (curr.result.correct / curr.result.total), 0) / toeicAttempts.length * 100)
       : null
@@ -41,10 +41,10 @@ export default function DashboardPage() {
   const chartData = useMemo(() => {
     const lastSeven = gradedAttempts.slice(0, 7).reverse()
     return lastSeven.map(att => {
-      const isToeic = att.skill.startsWith('ets_')
-      const bookLabel = isToeic ? `ETS ${att.book}` : `Cam ${att.book}`
+      const isToeic = att.skill.startsWith('toeic_')
+      const bookLabel = isToeic ? `TOEIC ${att.book}` : `Cam ${att.book}`
       const skillShort = isToeic 
-        ? att.skill.replace('ets_', '').toUpperCase()
+        ? att.skill.replace('toeic_', '').toUpperCase()
         : att.skill.charAt(0).toUpperCase() + att.skill.slice(1, 3)
       return {
         label: `${bookLabel} T${att.test} (${skillShort})`,
@@ -124,7 +124,7 @@ export default function DashboardPage() {
                   const xPos = idx * spacing + 50
                   const barHeight = (item.percent / 100) * 150
                   const yPos = 180 - barHeight
-                  const isToeic = item.label.includes('ETS')
+                  const isToeic = item.label.includes('TOEIC')
 
                   return (
                     <g key={idx}>

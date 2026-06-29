@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import useSWR from 'swr'
 import './page.css'
 
@@ -31,8 +31,11 @@ export default function VocabularyPage() {
   // Global Statistics SWR fetcher
   const { data: stats, error: statsError, mutate: mutateStats } = useSWR('/api/vocabulary/stats', fetcher)
 
+  // Keep active utterances in a ref to prevent garbage collection
+  const activeUtterancesRef = useRef<Set<SpeechSynthesisUtterance>>(new Set())
+
   // Speak helper using Web Speech API
-  const speakWord = (word: string) => {
+  const speakWord = useCallback((word: string, onEnd?: () => void) => {
     if (typeof window === 'undefined' || !window.speechSynthesis) return
     window.speechSynthesis.cancel() // stop any current speaking
     const utterance = new SpeechSynthesisUtterance(word)
@@ -44,8 +47,23 @@ export default function VocabularyPage() {
     if (enVoice) {
       utterance.voice = enVoice
     }
+
+    activeUtterancesRef.current.add(utterance)
+    const cleanup = () => {
+      activeUtterancesRef.current.delete(utterance)
+    }
+
+    utterance.onend = () => {
+      cleanup()
+      if (onEnd) onEnd()
+    }
+    utterance.onerror = () => {
+      cleanup()
+      if (onEnd) onEnd()
+    }
+
     window.speechSynthesis.speak(utterance)
-  }
+  }, [])
 
   // Common progress update POST helper
   const updateWordProgress = async (
@@ -174,7 +192,7 @@ export default function VocabularyPage() {
    ========================================================================== */
 type LibraryViewProps = {
   stats: any
-  speakWord: (word: string) => void
+  speakWord: (word: string, onEnd?: () => void) => void
   updateWordProgress: (w: string, data: any) => Promise<boolean>
   mutateStats: () => void
 }
@@ -263,23 +281,24 @@ function LibraryView({
     })
   }
 
-  // Bulk unmark mastered (set them back to 'learning' status)
-  const handleBulkUnmaster = async () => {
+  // Generic bulk status update handler
+  const handleBulkStatusUpdate = async () => {
     if (selectedVocabs.size === 0) return
     const vocabsArray = Array.from(selectedVocabs)
+    const nextStatus = isMasteredMode ? 'learning' : 'unlearned'
 
     try {
       const res = await fetch('/api/vocabulary/progress/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vocabs: vocabsArray, status: 'learning' }),
+        body: JSON.stringify({ vocabs: vocabsArray, status: nextStatus }),
       })
       if (res.ok) {
         setSelectedVocabs(new Set())
         mutateList()
         mutateStats()
       } else {
-        alert('Failed to unmark Mastered words.')
+        alert('Failed to update selected words status.')
       }
     } catch (err) {
       console.error(err)
@@ -288,6 +307,39 @@ function LibraryView({
   }
 
   const isMasteredMode = statusFilter === 'mastered'
+  const isLearningMode = statusFilter === 'learning'
+  const isBulkSelectMode = isMasteredMode || isLearningMode
+
+  // Get all vocabs currently shown on the page
+  const shownVocabs = useMemo(() => {
+    if (!data || !data.items) return []
+    return data.items.map((item: WordItem) => item.vocab.toLowerCase())
+  }, [data])
+
+  // Check if all shown vocabs are selected
+  const isAllSelected = useMemo(() => {
+    if (shownVocabs.length === 0) return false
+    return shownVocabs.every(vocab => selectedVocabs.has(vocab))
+  }, [shownVocabs, selectedVocabs])
+
+  // Select all / Deselect all toggle
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      // Deselect all shown vocabs
+      setSelectedVocabs(prev => {
+        const next = new Set(prev)
+        shownVocabs.forEach(vocab => next.delete(vocab))
+        return next
+      })
+    } else {
+      // Select all shown vocabs
+      setSelectedVocabs(prev => {
+        const next = new Set(prev)
+        shownVocabs.forEach(vocab => next.add(vocab))
+        return next
+      })
+    }
+  }
 
   return (
     <div className="library-view-container" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -397,14 +449,31 @@ function LibraryView({
       {data && (
         <>
           {/* Bulk Action Header bar */}
-          {selectedVocabs.size > 0 && (
-            <div className="bulk-actions-bar animate-slide-down">
-              <div className="bulk-actions-info">
-                Selected <strong>{selectedVocabs.size}</strong> mastered words to unmark
-              </div>
-              <button type="button" className="bulk-action-btn" onClick={handleBulkUnmaster}>
-                Unmark Mastered
+          {isBulkSelectMode && (
+            <div className="bulk-actions-bar animate-slide-down" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+              <button 
+                type="button" 
+                className="pagination-btn" 
+                onClick={handleToggleSelectAll}
+                style={{ padding: '8px 16px', fontSize: '0.88rem', height: 'auto', minHeight: 'auto' }}
+              >
+                {isAllSelected ? '☐ Deselect All' : '☑ Select All'}
               </button>
+              
+              {selectedVocabs.size > 0 ? (
+                <>
+                  <div className="bulk-actions-info" style={{ flex: 1, margin: 0 }}>
+                    Selected <strong>{selectedVocabs.size}</strong> word(s) to unmark
+                  </div>
+                  <button type="button" className="bulk-action-btn" onClick={handleBulkStatusUpdate}>
+                    {isMasteredMode ? 'Unmark Mastered' : 'Unmark Learning'}
+                  </button>
+                </>
+              ) : (
+                <div style={{ flex: 1, fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+                  Select words to perform bulk actions
+                </div>
+              )}
             </div>
           )}
 
@@ -440,7 +509,7 @@ function LibraryView({
                   >
                     <div className="word-card-top">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        {isMasteredMode && (
+                        {isBulkSelectMode && (
                           <div className="card-checkbox-wrapper" onClick={(e) => e.stopPropagation()}>
                             <input
                               type="checkbox"
@@ -624,7 +693,7 @@ function FlashcardsView({
   updateWordProgress,
 }: {
   stats: any
-  speakWord: (word: string) => void
+  speakWord: (word: string, onEnd?: () => void) => void
   updateWordProgress: (w: string, data: any) => Promise<boolean>
 }) {
   const [isPlaying, setIsPlaying] = useState(false)
@@ -633,17 +702,21 @@ function FlashcardsView({
   const [limit, setLimit] = useState(15)
 
   const [deck, setDeck] = useState<WordItem[]>([])
-  const [cardIndex, setCardIndex] = useState(0)
+  const [cardIndex, setCardIndex] = useState(-1) // Starts at -1 for the Start card
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
+  const [isSpeaking, setIsSpeaking] = useState(false) // Lock Next button while reading
 
   const activeCard = deck[cardIndex]
 
   // Automatically speak the word once when the card changes
   useEffect(() => {
     if (isPlaying && activeCard) {
+      setIsSpeaking(true)
       const timer = setTimeout(() => {
-        speakWord(activeCard.vocab)
+        speakWord(activeCard.vocab, () => {
+          setIsSpeaking(false)
+        })
       }, 500)
       return () => clearTimeout(timer)
     }
@@ -671,7 +744,7 @@ function FlashcardsView({
           setErrorMsg('No eligible practice words available (Mastered words are excluded).')
         } else {
           setDeck(data)
-          setCardIndex(0)
+          setCardIndex(-1) // Ready to start card
           setIsPlaying(true)
         }
       } else {
@@ -685,13 +758,22 @@ function FlashcardsView({
   }
 
   // Flat flashcard Next action: automatically sets status to "learning" and advances
-  const handleNextCard = async () => {
-    if (!activeCard) return
-    const word = activeCard.vocab
-    
-    // Save to learning/review pool immediately
-    await updateWordProgress(word, { status: 'learning' })
-    setCardIndex(idx => idx + 1)
+  const handleNextCard = () => {
+    if (cardIndex === -1) {
+      if (deck.length > 0) {
+        // Mark first word as learning
+        updateWordProgress(deck[0].vocab, { status: 'learning' })
+        setCardIndex(0)
+      }
+    } else {
+      if (!activeCard) return
+      const nextIdx = cardIndex + 1
+      if (nextIdx < deck.length) {
+        // Mark next word as learning
+        updateWordProgress(deck[nextIdx].vocab, { status: 'learning' })
+      }
+      setCardIndex(nextIdx)
+    }
   }
 
   // Determine dynamic list of POS choices
@@ -808,7 +890,7 @@ function FlashcardsView({
               Quit Session
             </button>
             <div className="flashcard-deck-info">
-              <span>Card {cardIndex + 1} of {deck.length}</span>
+              <span>{cardIndex === -1 ? 'Ready' : `Card ${cardIndex + 1} of ${deck.length}`}</span>
             </div>
           </div>
 
@@ -816,35 +898,50 @@ function FlashcardsView({
           <div className="flashcard-progress-bar-bg">
             <div
               className="flashcard-progress-bar-fill"
-              style={{ width: `${((cardIndex) / deck.length) * 100}%` }}
+              style={{ width: `${cardIndex === -1 ? 0 : ((cardIndex + 1) / deck.length) * 100}%` }}
             ></div>
           </div>
 
           {/* Flat Flashcard containing full details */}
-          {activeCard && (
-            <div className="card-face" style={{ height: '320px', cursor: 'default' }}>
-              <div className="card-face-top">
-                <span className={`word-pos-badge ${activeCard.POS.toLowerCase().replace('.', '')}`}>
-                  {activeCard.POS}
-                </span>
-                <button
-                  type="button"
-                  className="action-btn"
-                  title="Listen pronunciation"
-                  onClick={() => speakWord(activeCard.vocab)}
-                >
-                  🔊
-                </button>
-              </div>
-              
-              <div className="card-face-mid" style={{ gap: '10px' }}>
-                <span className="card-vocab-text">{activeCard.vocab}</span>
-                <span className="word-pron" style={{ fontSize: '1.25rem' }}>{activeCard.pronunciation}</span>
-                <span className="card-definition-text" style={{ marginTop: '10px' }}>{activeCard.definition}</span>
-              </div>
-
-              <span className="card-hint-text">Progress: {cardIndex + 1}/{deck.length} cards</span>
+          {cardIndex === -1 ? (
+            <div className="card-face" style={{ height: '320px', cursor: 'default', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '14px' }}>
+              <span style={{ fontSize: '3rem' }}>🏁</span>
+              <span className="card-vocab-text" style={{ fontSize: '1.8rem' }}>Ready to Start?</span>
+              <span className="card-definition-text" style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+                Press "Start Deck" below to begin review. All words shown will go to your learning pool.
+              </span>
             </div>
+          ) : (
+            activeCard && (
+              <div className="card-face" style={{ height: '320px', cursor: 'default' }}>
+                <div className="card-face-top">
+                  <span className={`word-pos-badge ${activeCard.POS.toLowerCase().replace('.', '')}`}>
+                    {activeCard.POS}
+                  </span>
+                  <button
+                    type="button"
+                    className="action-btn"
+                    title="Listen pronunciation"
+                    onClick={() => {
+                      setIsSpeaking(true)
+                      speakWord(activeCard.vocab, () => {
+                        setIsSpeaking(false)
+                      })
+                    }}
+                  >
+                    🔊
+                  </button>
+                </div>
+                
+                <div className="card-face-mid" style={{ gap: '10px' }}>
+                  <span className="card-vocab-text">{activeCard.vocab}</span>
+                  <span className="word-pron" style={{ fontSize: '1.25rem' }}>{activeCard.pronunciation}</span>
+                  <span className="card-definition-text" style={{ marginTop: '10px' }}>{activeCard.definition}</span>
+                </div>
+
+                <span className="card-hint-text">Progress: {cardIndex + 1}/{deck.length} cards</span>
+              </div>
+            )
           )}
 
           {/* Single Next Card action button */}
@@ -853,9 +950,10 @@ function FlashcardsView({
               type="button"
               className="start-deck-btn"
               onClick={handleNextCard}
-              style={{ width: '100%', padding: '14px' }}
+              disabled={isSpeaking && cardIndex >= 0}
+              style={{ width: '100%', padding: '14px', opacity: (isSpeaking && cardIndex >= 0) ? 0.6 : 1 }}
             >
-              {cardIndex === deck.length - 1 ? 'Finish Deck ➔' : 'Next Card ➔'}
+              {cardIndex === -1 ? 'Start Deck ➔' : (cardIndex === deck.length - 1 ? 'Finish Deck ➔' : 'Next Card ➔')}
             </button>
           </div>
         </div>
@@ -873,7 +971,7 @@ function PracticeView({
   updateWordProgress,
 }: {
   stats: any
-  speakWord: (word: string) => void
+  speakWord: (word: string, onEnd?: () => void) => void
   updateWordProgress: (w: string, data: any) => Promise<boolean>
 }) {
   const [activeGame, setActiveGame] = useState<'translation' | 'spelling' | 'matching' | null>(null)
@@ -1083,6 +1181,7 @@ function TranslationGame({
   const [isCorrect, setIsCorrect] = useState(false)
   const [correctCount, setCorrectCount] = useState(0)
   const [wrongCount, setWrongCount] = useState(0)
+  const [hintRevealed, setHintRevealed] = useState(false)
 
   const activeWord = deck[index]
 
@@ -1123,6 +1222,7 @@ function TranslationGame({
   const handleNext = () => {
     setTypedWord('')
     setIsSubmitted(false)
+    setHintRevealed(false)
     setIndex(i => i + 1)
   }
 
@@ -1198,6 +1298,40 @@ function TranslationGame({
             Type the {promptLang === 'en' ? 'Vietnamese meaning' : 'English spelling'}
           </div>
 
+          {/* Reveal details clue only if hintRevealed is true */}
+          {hintRevealed && (
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+              alignItems: 'center',
+              background: 'var(--bg-primary)',
+              padding: '16px',
+              borderRadius: 'var(--radius-md)',
+              width: '100%',
+              textAlign: 'center',
+              border: '1px solid var(--border-light)',
+              marginBottom: '14px'
+            }}>
+              {promptLang === 'en' ? (
+                <div style={{ display: 'flex', gap: '12px', fontSize: '0.95rem', color: 'var(--text-primary)', fontWeight: 700 }}>
+                  <span>Pronunciation: {activeWord.pronunciation}</span>
+                  <span>Type: ({activeWord.POS})</span>
+                </div>
+              ) : (
+                <>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 750, color: 'var(--text-primary)', letterSpacing: '1px' }}>
+                    Starts with: {activeWord.vocab.charAt(0)}{'_'.repeat(activeWord.vocab.length - 1)} ({activeWord.vocab.length} letters)
+                  </div>
+                  <div style={{ display: 'flex', gap: '12px', fontSize: '0.88rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                    <span>Pronunciation: {activeWord.pronunciation}</span>
+                    <span>Type: ({activeWord.POS})</span>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           <input
             type="text"
             className={`spelling-input ${isSubmitted ? (isCorrect ? 'correct' : 'incorrect') : ''}`}
@@ -1232,14 +1366,25 @@ function TranslationGame({
 
           <div className="spelling-actions">
             {!isSubmitted ? (
-              <button
-                type="button"
-                className="spelling-btn submit"
-                onClick={handleVerify}
-                disabled={!typedWord.trim()}
-              >
-                Submit Answer
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="spelling-btn"
+                  onClick={() => setHintRevealed(true)}
+                  disabled={hintRevealed}
+                  style={{ opacity: hintRevealed ? 0.5 : 1 }}
+                >
+                  💡 Show Clue
+                </button>
+                <button
+                  type="button"
+                  className="spelling-btn submit"
+                  onClick={handleVerify}
+                  disabled={!typedWord.trim()}
+                >
+                  Submit Answer
+                </button>
+              </>
             ) : (
               <button type="button" className="start-deck-btn" onClick={handleNext}>
                 Continue Next ➔
@@ -1263,7 +1408,7 @@ function SpellingGame({
 }: {
   deck: WordItem[]
   onQuit: () => void
-  speakWord: (word: string) => void
+  speakWord: (word: string, onEnd?: () => void) => void
   updateWordProgress: (w: string, data: any) => Promise<boolean>
 }) {
   const [index, setIndex] = useState(0)
@@ -1276,10 +1421,13 @@ function SpellingGame({
 
   const activeWord = deck[index]
 
+  const lastPlayedIndexRef = useRef<number | null>(null)
+
   // Speak word automatically when active index changes
   useEffect(() => {
-    if (activeWord) {
+    if (activeWord && lastPlayedIndexRef.current !== index) {
       const t = setTimeout(() => {
+        lastPlayedIndexRef.current = index
         speakWord(activeWord.vocab)
       }, 500)
       return () => clearTimeout(t)
