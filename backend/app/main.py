@@ -10,9 +10,10 @@ from app.modules.attempts import router as attempts_router
 from app.modules.audio import router as audio_router
 from app.modules.r2_client import router as r2_client_router
 from app.modules.vocabulary import router as vocabulary_router
+from app.modules.telegram import init_telegram_bot, shutdown_telegram_bot
+from app.modules.telegram.controller import router as telegram_router
 
 app = FastAPI(title="IELTS Platform API", version="1.0.0")
-
 # CORS Setup
 app.add_middleware(
     CORSMiddleware,
@@ -30,12 +31,27 @@ app.include_router(attempts_router)
 app.include_router(audio_router)
 app.include_router(r2_client_router)
 app.include_router(vocabulary_router)
+app.include_router(telegram_router)
 
 
 @app.on_event("startup")
-def startup_event():
+async def startup_event():
     seed_approved_user()
+    try:
+        await init_telegram_bot()
+    except Exception as e:
+        print(f"Failed to start telegram bot: {e}")
     print("Backend started successfully.")
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    try:
+        await shutdown_telegram_bot()
+    except Exception as e:
+        print(f"Failed to shutdown telegram bot: {e}")
+
+
 
 @app.get("/")
 def root():

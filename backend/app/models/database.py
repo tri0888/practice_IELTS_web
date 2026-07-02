@@ -102,3 +102,7 @@ def vocabulary_progress_collection():
 def vocabulary_collection():
     return _db["vocabulary"] if _db is not None else None
 
+def telegram_users_collection():
+    return _db["telegram_users"] if _db is not None else None
+
+
