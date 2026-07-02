@@ -6,6 +6,12 @@ from fastapi import HTTPException
 from app.models import database as db
 from app.modules.tests.services import find_book_pdf_path
 
+
+def is_toeic(book: int) -> bool:
+    """Single source of the exam-type rule: TOEIC 'books' are encoded as their
+    exam year (e.g. 2026), while IELTS Cambridge books use small numbers (11-20)."""
+    return book >= 2000
+
 @lru_cache(maxsize=1)
 def load_all_layouts() -> dict:
     repo_root = Path(__file__).resolve().parents[4]
@@ -55,7 +61,7 @@ def get_pdf_bytes_cached(pdf_key: str) -> bytes:
 
 def get_practice_layout_dict(book: int, test: int):
     if db.is_available():
-        if book >= 2000:
+        if is_toeic(book):
             coll = db.toeic_layouts_collection()
         else:
             coll = db.layouts_collection()
@@ -63,8 +69,8 @@ def get_practice_layout_dict(book: int, test: int):
             doc = coll.find_one({"book": book, "test": test}, {"_id": 0})
             if doc and "layout" in doc:
                 return doc["layout"]
-    
-    if book >= 2000:
+
+    if is_toeic(book):
         ets_layouts_data = load_ets_layouts()
         year_key = f"ETS {book}"
         if year_key in ets_layouts_data:
@@ -99,7 +105,7 @@ def get_practice_layout_dict(book: int, test: int):
 
 def get_test_answers_dict(book: int, test: int, skill: str = None) -> dict:
     if db.is_available():
-        if book >= 2000:
+        if is_toeic(book):
             coll = db.toeic_answers_collection()
         else:
             coll = db.answers_collection()
@@ -112,169 +118,57 @@ def get_test_answers_dict(book: int, test: int, skill: str = None) -> dict:
                     return doc["answers"]
     return {}
 
-@lru_cache(maxsize=128)
-def get_pdf_page_bytes(book: int, page_number: int, pdf_type: str = "academic") -> bytes:
-    try:
-        pdf_key = find_book_pdf_path(book, pdf_type)
-        pdf_bytes = get_pdf_bytes_cached(pdf_key)
-    except Exception as e:
-        if isinstance(e, HTTPException):
-            raise e
-        raise HTTPException(status_code=404, detail=f"Cambridge IELTS {book} PDF not found")
-        
-    try:
-        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-        page_num_actual = min(max(1, page_number), len(doc))
-        page = doc[page_num_actual - 1]
-        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
-        png_bytes = pix.tobytes("png")
-        doc.close()
-        return png_bytes
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+def resolve_part_pages(layout: dict, part_key: str) -> list[int]:
+    """Map a practice ``part_key`` (e.g. ``listening_2``, ``reading_1``,
+    ``reading_all``, ``writing_1``, ``speaking``) to the ordered list of PDF
+    page numbers for that part, using the given practice layout."""
+    pages: list[int] = []
+    if not layout:
+        return pages
 
-@lru_cache(maxsize=64)
-def get_pdf_part_bytes(book: int, pdf_type: str, test: int, part_key: str) -> bytes:
-    layout = get_practice_layout_dict(book, test)
-    pages = []
-    if layout:
-        if part_key.startswith("listening_"):
-            try:
-                sec_num = int(part_key.split("_")[1])
-                item = next((x for x in layout.get("listening", []) if x["section"] == sec_num), None)
-                if item: pages = item["pages"]
-            except ValueError:
-                if part_key == "listening_all":
-                    pages = []
-                    for x in layout.get("listening", []):
-                        pages.extend(x.get("pages", []))
-        elif part_key.startswith("reading_q_"):
-            pas_num = int(part_key.split("_")[2])
+    if part_key.startswith("listening_"):
+        try:
+            sec_num = int(part_key.split("_")[1])
+            item = next((x for x in layout.get("listening", []) if x["section"] == sec_num), None)
+            if item: pages = item["pages"]
+        except ValueError:
+            if part_key == "listening_all":
+                for x in layout.get("listening", []):
+                    pages.extend(x.get("pages", []))
+    elif part_key.startswith("reading_q_"):
+        pas_num = int(part_key.split("_")[2])
+        item = next((x for x in layout.get("reading", []) if x["passage"] == pas_num), None)
+        if item and item.get("groups"):
+            pages = list(set([g["page"] for g in item["groups"]]))
+            pages.sort()
+    elif part_key.startswith("reading_"):
+        try:
+            pas_num = int(part_key.split("_")[1])
             item = next((x for x in layout.get("reading", []) if x["passage"] == pas_num), None)
-            if item and item.get("groups"):
-                 pages = list(set([g["page"] for g in item["groups"]]))
-                 pages.sort()
-        elif part_key.startswith("reading_"):
-            try:
-                pas_num = int(part_key.split("_")[1])
-                item = next((x for x in layout.get("reading", []) if x["passage"] == pas_num), None)
-                if item: pages = item["passage_pages"]
-            except ValueError:
-                if part_key == "reading_all":
-                    pages = []
-                    for x in layout.get("reading", []):
-                        pages.extend(x.get("passage_pages", []))
-        elif part_key.startswith("writing_"):
-            task_num = int(part_key.split("_")[1])
-            item = next((x for x in layout.get("writing", []) if x["task"] == task_num), None)
-            if item: pages = item["pages"]
-        elif part_key == "speaking":
-            item = layout.get("speaking", [None])[0]
-            if item: pages = item["pages"]
+            if item: pages = item["passage_pages"]
+        except ValueError:
+            if part_key == "reading_all":
+                for x in layout.get("reading", []):
+                    pages.extend(x.get("passage_pages", []))
+    elif part_key.startswith("writing_"):
+        task_num = int(part_key.split("_")[1])
+        item = next((x for x in layout.get("writing", []) if x["task"] == task_num), None)
+        if item: pages = item["pages"]
+    elif part_key == "speaking":
+        item = layout.get("speaking", [None])[0]
+        if item: pages = item["pages"]
 
-    if not pages:
-        raise HTTPException(status_code=404, detail=f"Part {part_key} not mapped or found for Book {book} Test {test}")
-
-    try:
-        pdf_key = find_book_pdf_path(book, pdf_type)
-        pdf_bytes = get_pdf_bytes_cached(pdf_key)
-    except Exception as e:
-        if isinstance(e, HTTPException):
-            raise e
-        raise HTTPException(status_code=404, detail=f"Cambridge IELTS {book} PDF not found")
-        
-    try:
-        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-    segments = []
-    for p in pages:
-        page_num_actual = min(max(1, p), len(doc))
-        page_h = doc[page_num_actual - 1].rect.height
-        segments.append({"page": page_num_actual, "y_start": 0.0, "y_end": page_h})
-            
-    first_page_num = min(max(1, segments[0]["page"]), len(doc))
-    width = doc[first_page_num - 1].rect.width
-    
-    total_height = 0.0
-    valid_segments = []
-    for seg in segments:
-        p_num = min(max(1, seg["page"]), len(doc))
-        page_h = doc[p_num - 1].rect.height
-        y_s = max(0.0, float(seg.get("y_start", 0.0)))
-        y_e = float(seg.get("y_end", page_h))
-        y_e = min(page_h, y_e)
-        
-        h = y_e - y_s
-        if h > 0:
-            total_height += h
-            valid_segments.append((p_num, y_s, y_e, h))
-            
-    if not valid_segments or total_height <= 0:
-        doc.close()
-        raise HTTPException(status_code=400, detail="Invalid segments for stitching")
-        
-    out_doc = fitz.open()
-    new_page = out_doc.new_page(width=width, height=total_height)
-    
-    curr_y = 0.0
-    for p_num, y_s, y_e, h in valid_segments:
-        dest_rect = fitz.Rect(0.0, curr_y, width, curr_y + h)
-        clip_rect = fitz.Rect(0.0, y_s, width, y_e)
-        new_page.show_pdf_page(dest_rect, doc, p_num - 1, clip=clip_rect)
-        curr_y += h
-        
-    pix = new_page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
-    png_bytes = pix.tobytes("png")
-    
-    doc.close()
-    out_doc.close()
-    return png_bytes
+    return pages
 
 def get_pdf_part_file(book: int, pdf_type: str, test: int, part_key: str) -> bytes:
     layout = get_practice_layout_dict(book, test)
-    pages = []
-    if layout:
-        if part_key.startswith("listening_"):
-            try:
-                sec_num = int(part_key.split("_")[1])
-                item = next((x for x in layout.get("listening", []) if x["section"] == sec_num), None)
-                if item: pages = item["pages"]
-            except ValueError:
-                if part_key == "listening_all":
-                    pages = []
-                    for x in layout.get("listening", []):
-                        pages.extend(x.get("pages", []))
-        elif part_key.startswith("reading_q_"):
-            pas_num = int(part_key.split("_")[2])
-            item = next((x for x in layout.get("reading", []) if x["passage"] == pas_num), None)
-            if item and item.get("groups"):
-                 pages = list(set([g["page"] for g in item["groups"]]))
-                 pages.sort()
-        elif part_key.startswith("reading_"):
-            try:
-                pas_num = int(part_key.split("_")[1])
-                item = next((x for x in layout.get("reading", []) if x["passage"] == pas_num), None)
-                if item: pages = item["passage_pages"]
-            except ValueError:
-                if part_key == "reading_all":
-                    pages = []
-                    for x in layout.get("reading", []):
-                        pages.extend(x.get("passage_pages", []))
-        elif part_key.startswith("writing_"):
-            task_num = int(part_key.split("_")[1])
-            item = next((x for x in layout.get("writing", []) if x["task"] == task_num), None)
-            if item: pages = item["pages"]
-        elif part_key == "speaking":
-            item = layout.get("speaking", [None])[0]
-            if item: pages = item["pages"]
+    pages = resolve_part_pages(layout, part_key)
 
     if not pages:
         raise HTTPException(status_code=404, detail=f"Part {part_key} not mapped or found for Book {book} Test {test}")
 
     try:
-        if book >= 2000:
+        if is_toeic(book):
             from app.modules.tests.services import get_ets_pdf_path
             pdf_key = get_ets_pdf_path(pdf_type, test, str(book))
         else:
@@ -302,7 +196,7 @@ def get_pdf_part_file(book: int, pdf_type: str, test: int, part_key: str) -> byt
 
 def get_pdf_page_file(book: int, page_number: int, pdf_type: str = "academic", test: int = 1) -> bytes:
     try:
-        if book >= 2000:
+        if is_toeic(book):
             from app.modules.tests.services import get_ets_pdf_path
             pdf_key = get_ets_pdf_path(pdf_type, test, str(book))
         else:

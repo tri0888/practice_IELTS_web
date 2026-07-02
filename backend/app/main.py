@@ -1,7 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from app.models import database as db
-from app.modules.practice.services import load_all_layouts
 from app.modules.auth import router as auth_router
 from app.modules.auth.services import seed_approved_user
 from app.modules.tests import router as tests_router
