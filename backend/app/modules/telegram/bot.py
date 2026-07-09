@@ -42,12 +42,25 @@ async def init_telegram_bot():
         
         # Set Webhook URL if provided
         webhook_base = os.getenv("TELEGRAM_WEBHOOK_URL")
-        if webhook_base and webhook_base.strip():
-            webhook_url = f"{webhook_base.strip().rstrip('/')}/api/telegram/webhook"
-            await application.bot.set_webhook(url=webhook_url)
-            print(f"Telegram Bot webhook set successfully to: {webhook_url}")
-        else:
+        if not webhook_base or not webhook_base.strip():
             print("WARNING: TELEGRAM_WEBHOOK_URL is not set in .env. Webhook endpoint will not receive updates.")
+        elif os.getenv("TELEGRAM_SET_WEBHOOK", "true").strip().lower() not in ("1", "true", "yes"):
+            print("TELEGRAM_SET_WEBHOOK is disabled. Skipping webhook registration (set it manually).")
+        else:
+            webhook_url = f"{webhook_base.strip().rstrip('/')}/api/telegram/webhook"
+            
+            try:
+                info = await application.bot.get_webhook_info()
+                current_url = getattr(info, "url", "") or ""
+            except Exception as e:
+                print(f"Could not fetch current webhook info ({e}); will set webhook anyway.")
+                current_url = ""
+
+            if current_url == webhook_url:
+                print(f"Telegram Bot webhook already set to: {webhook_url}. Skipping.")
+            else:
+                await application.bot.set_webhook(url=webhook_url)
+                print(f"Telegram Bot webhook set successfully to: {webhook_url}")
             
     except Exception as e:
         print(f"Error initializing Telegram Bot: {str(e)}")
@@ -66,5 +79,4 @@ async def shutdown_telegram_bot():
             print("Telegram Bot application shut down successfully.")
         except Exception as e:
             print(f"Error during Telegram Bot shutdown: {str(e)}")
-
 

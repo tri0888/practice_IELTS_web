@@ -11,6 +11,7 @@ from app.modules.r2_client import router as r2_client_router
 from app.modules.vocabulary import router as vocabulary_router
 from app.modules.telegram import init_telegram_bot, shutdown_telegram_bot
 from app.modules.telegram.controller import router as telegram_router
+from app.modules.tunnel import start_cloudflare_tunnel, stop_cloudflare_tunnel
 
 app = FastAPI(title="IELTS Platform API", version="1.0.0")
 # CORS Setup
@@ -37,6 +38,10 @@ app.include_router(telegram_router)
 async def startup_event():
     seed_approved_user()
     try:
+        start_cloudflare_tunnel()
+    except Exception as e:
+        print(f"Failed to start cloudflare tunnel: {e}")
+    try:
         await init_telegram_bot()
     except Exception as e:
         print(f"Failed to start telegram bot: {e}")
@@ -49,6 +54,10 @@ async def shutdown_event():
         await shutdown_telegram_bot()
     except Exception as e:
         print(f"Failed to shutdown telegram bot: {e}")
+    try:
+        stop_cloudflare_tunnel()
+    except Exception as e:
+        print(f"Failed to shutdown cloudflare tunnel: {e}")
 
 
 
