@@ -4,6 +4,7 @@ import React, { Suspense, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/components/AuthProvider/AuthProvider'
+import ThemeToggle from '@/components/ThemeToggle/ThemeToggle'
 import './AppLayout.css'
 
 interface AppLayoutProps {
@@ -130,6 +131,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </Link>
         <nav className="ielts-header__nav">
           <Link href="/history">History</Link>
+          <ThemeToggle />
           <div className="header-user-chip" title={user?.email || ''}>
             <span>{user?.name || user?.email}</span>
             <button type="button" onClick={logout}>Logout</button>

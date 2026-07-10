@@ -8,7 +8,7 @@
 /* Left Filter Panel */
 .tests-filter-panel {
   width: 260px;
-  background: white;
+  background: var(--bg-card);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
   padding: 24px;
@@ -129,7 +129,7 @@
   text-align: center;
   color: var(--text-secondary);
   font-size: 0.95rem;
-  background: white;
+  background: var(--bg-card);
 }
 
 /* Direct skill badging inside filtered cards */
@@ -209,7 +209,7 @@
 }
 
 .exam-card {
-  background: white;
+  background: var(--bg-card);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
   padding: 32px 24px;
@@ -386,7 +386,7 @@
 }
 
 .switcher-tab--active {
-  background: white;
+  background: var(--bg-card);
   color: var(--ielts-red);
   box-shadow: var(--shadow-sm);
 }
@@ -451,7 +451,7 @@
 }
 
 .book-choice-card {
-  background: white;
+  background: var(--bg-card);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-lg);
   padding: 24px 16px;
@@ -565,7 +565,7 @@
 }
 
 .modal-content {
-  background: white;
+  background: var(--bg-card);
   border-radius: var(--radius-xl);
   width: 90%;
   max-width: 580px;
@@ -651,7 +651,7 @@
 }
 
 .modal-skill-card:hover {
-  background: white;
+  background: var(--bg-card);
   transform: translateX(4px);
   box-shadow: var(--shadow-sm);
   border-color: rgba(0, 0, 0, 0.1);
@@ -709,4 +709,12 @@
   border-top: 1px solid var(--border-light);
   display: flex;
   justify-content: flex-end;
+}
+
+/* -------- Dark theme adjustments -------- */
+:root[data-theme="dark"] .exam-card:hover,
+:root[data-theme="dark"] .book-choice-card:hover,
+:root[data-theme="dark"] .clickable-test-card:hover,
+:root[data-theme="dark"] .modal-skill-card:hover {
+  border-color: rgba(255, 255, 255, 0.14);
 }

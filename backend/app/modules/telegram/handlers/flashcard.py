@@ -5,7 +5,11 @@ from telegram.ext import (
     CommandHandler,
     CallbackQueryHandler,
 )
-from app.modules.telegram.services import get_user_id_by_telegram
+from app.modules.telegram.services import (
+    get_user_id_by_telegram,
+    get_flashcard_file_id,
+    FLASHCARD_TTS_VOICE,
+)
 from app.modules.vocabulary import services as vocab_services
 
 # Conversation States
@@ -177,25 +181,72 @@ async def show_card(query, context: ContextTypes.DEFAULT_TYPE):
     is_last = (index == len(deck) - 1)
     btn_text = "✅ Finish" if is_last else "⏭ Next"
     btn_data = "fc:finish" if is_last else "fc:next"
-    
-    keyboard = [[InlineKeyboardButton(btn_text, callback_data=btn_data)]]
+
+    keyboard = [
+        [InlineKeyboardButton("🔊 Pronounce", callback_data="fc:speak")],
+        [InlineKeyboardButton(btn_text, callback_data=btn_data)]
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     
     await query.edit_message_text(text, reply_markup=reply_markup, parse_mode="Markdown")
 
+async def _clear_voices(query, context: ContextTypes.DEFAULT_TYPE):
+    """Delete any pronunciation voice messages sent for the current card."""
+    voice_ids = context.user_data.get("fc_voice_msgs", [])
+    if not voice_ids:
+        return
+    chat_id = query.message.chat.id
+    for mid in voice_ids:
+        try:
+            await context.bot.delete_message(chat_id=chat_id, message_id=mid)
+        except Exception:
+            pass  # voice may be older than 48h or already deleted; ignore
+    context.user_data["fc_voice_msgs"] = []
+
 async def card_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
-    await query.answer()
-    
+
     action = query.data
     deck = context.user_data.get("fc_deck", [])
     index = context.user_data.get("fc_index", 0)
-    
+
+    # Play pronunciation: send the cached voice message (does not advance the card).
+    if action == "fc:speak":
+        word = deck[index].get("vocab", "") if deck and index < len(deck) else ""
+        file_id = (
+            get_flashcard_file_id(context.bot.id, word.lower(), FLASHCARD_TTS_VOICE)
+            if word else None
+        )
+        if file_id:
+            await query.answer()
+            sent = await context.bot.send_voice(chat_id=query.message.chat.id, voice=file_id)
+            context.user_data.setdefault("fc_voice_msgs", []).append(sent.message_id)
+            # Hide the Pronounce button so it can't be tapped again for this card;
+            # keep only Next/Finish. It reappears when show_card renders the next word.
+            is_last = (index == len(deck) - 1)
+            btn_text = "✅ Finish" if is_last else "⏭ Next"
+            btn_data = "fc:finish" if is_last else "fc:next"
+            try:
+                await query.edit_message_reply_markup(
+                    reply_markup=InlineKeyboardMarkup(
+                        [[InlineKeyboardButton(btn_text, callback_data=btn_data)]]
+                    )
+                )
+            except Exception:
+                pass  # message may be unchanged/too old; ignore
+        else:
+            await query.answer("🔇 Chưa có audio cho từ này (cần chạy seed).", show_alert=False)
+        return PLAY_CARDS
+
+    await query.answer()
+
     if action == "fc:next":
+        await _clear_voices(query, context)
         context.user_data["fc_index"] = index + 1
         await show_card(query, context)
         return PLAY_CARDS
     elif action == "fc:finish":
+        await _clear_voices(query, context)
         # Show end screen
         text = (
             "🎉 *Session Complete!*\n"
@@ -218,7 +269,8 @@ async def card_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
 async def fc_restart_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     query = update.callback_query
     await query.answer()
-    
+    await _clear_voices(query, context)
+
     # Step 1: Select Focus again
     text = (
         "📚 *Flashcard Practice*\n"
@@ -242,6 +294,7 @@ async def fc_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     elif update.callback_query:
         query = update.callback_query
         await query.answer()
+        await _clear_voices(query, context)
         await query.edit_message_text("👋 Đã kết thúc phiên ôn tập Flashcard.")
     return ConversationHandler.END
 

@@ -68,6 +68,10 @@
   border: 1px solid var(--status-correct);
 }
 
+:root[data-theme="dark"] .writing-word-count-badge--complete {
+  background: rgba(34, 197, 94, 0.12);
+}
+
 .writing-textarea {
   flex-grow: 1;
   width: 100%;

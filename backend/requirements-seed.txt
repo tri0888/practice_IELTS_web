@@ -1,0 +1,5 @@
+# Local-only dependencies for seeding flashcard TTS file_ids.
+# NOT needed in production runtime (which only reads cached file_ids from DB).
+#   pip install -r backend/requirements-seed.txt
+edge-tts>=6.1.0
+imageio-ffmpeg>=0.4.9

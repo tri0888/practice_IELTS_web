@@ -1,8 +1,12 @@
+import os
 import re
 from datetime import datetime
 from app.models import database as db
 from app.modules.auth import services as auth_services
 from app.modules.vocabulary import services as vocab_services
+
+# Default TTS voice for flashcard pronunciation (British accent for IELTS context).
+FLASHCARD_TTS_VOICE = os.getenv("FLASHCARD_TTS_VOICE", "en-GB-SoniaNeural")
 
 def link_telegram_account(telegram_id: int, email: str, password: str) -> dict:
     """
@@ -58,6 +62,47 @@ def get_user_id_by_telegram(telegram_id: int) -> str | None:
         return None
     doc = tg_coll.find_one({"telegram_id": telegram_id})
     return doc.get("user_id") if doc else None
+
+def get_flashcard_file_id(bot_id: int, vocab: str, voice: str) -> str | None:
+    """
+    Returns the cached Telegram file_id for a word's pronunciation voice message,
+    keyed by (bot_id, vocab, voice). file_id is bot-specific, hence bot_id is part
+    of the key so multiple bots (dev/prod) can each have their own cached ids.
+    """
+    if not db.is_available():
+        return None
+    coll = db.flashcard_audio_collection()
+    if coll is None:
+        return None
+    doc = coll.find_one({
+        "bot_id": bot_id,
+        "vocab": vocab.strip().lower(),
+        "voice": voice
+    })
+    return doc.get("file_id") if doc else None
+
+def save_flashcard_file_id(bot_id: int, vocab: str, voice: str, file_id: str) -> bool:
+    """
+    Upserts a cached file_id for (bot_id, vocab, voice). Used by the seed script.
+    """
+    if not db.is_available():
+        return False
+    coll = db.flashcard_audio_collection()
+    if coll is None:
+        return False
+    coll.update_one(
+        {"bot_id": bot_id, "vocab": vocab.strip().lower(), "voice": voice},
+        {"$set": {
+            "bot_id": bot_id,
+            "vocab": vocab.strip().lower(),
+            "voice": voice,
+            "file_id": file_id,
+            "file_type": "voice",
+            "created_at": datetime.utcnow().isoformat()
+        }},
+        upsert=True
+    )
+    return True
 
 def check_translation_answer(input_text: str, correct_val: str, direction: str) -> bool:
     """

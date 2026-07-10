@@ -99,3 +99,25 @@
   box-shadow: 0 2px 10px rgba(0,0,0,0.05);
 }
 
+/* -------- Dark Theme Adjustments -------- */
+:root[data-theme="dark"] .ets-q-card {
+  background: var(--bg-card);
+  border-color: var(--border-light);
+}
+:root[data-theme="dark"] .ets-q-card__header {
+  border-bottom-color: var(--border-light);
+}
+:root[data-theme="dark"] .ets-option-label {
+  border-color: var(--border-medium);
+}
+:root[data-theme="dark"] .ets-option-label:hover {
+  background: var(--bg-light);
+}
+:root[data-theme="dark"] .part-badge {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+}
+:root[data-theme="dark"] .ets-pdf-container {
+  background: var(--bg-primary);
+}
+

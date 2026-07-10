@@ -44,6 +44,10 @@
   color: var(--text-muted);
 }
 
+:root[data-theme="dark"] .badge-upcoming {
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .skill-emoji {
   font-size: 2rem;
   margin-bottom: 8px;

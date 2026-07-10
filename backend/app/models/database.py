@@ -105,4 +105,7 @@ def vocabulary_collection():
 def telegram_users_collection():
     return _db["telegram_users"] if _db is not None else None
 
+def flashcard_audio_collection():
+    return _db["flashcard_audio"] if _db is not None else None
+
 

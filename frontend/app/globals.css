@@ -18,6 +18,7 @@
   --bg-dark: #1a1d2e;
   --bg-darker: #141625;
   --bg-card: #ffffff;
+  --bg-light: #f1f5f9;
 
   /* Text */
   --text-primary: #1a1d2e;
@@ -69,6 +70,57 @@
   --sp-8: 32px;
   --sp-10: 40px;
   --sp-12: 48px;
+
+  color-scheme: light;
+}
+
+/* -------- Dark Theme (Night Mode) --------
+   Override design tokens only; component rules keep using var(--token)
+   so most of the UI flips automatically. Brand red is preserved. */
+:root[data-theme="dark"] {
+  /* Brand red — slightly brighter so it reads on dark bg */
+  --ielts-red: #ef4256;
+  --ielts-red-dark: #c8102e;
+  --ielts-red-light: #3a1620;
+
+  /* Neutral palette */
+  --bg-primary: #0f1120;
+  --bg-secondary: #171a2b;
+  --bg-dark: #0b0d18;
+  --bg-darker: #070810;
+  --bg-card: #1b1f33;
+  --bg-light: rgba(255, 255, 255, 0.06);
+
+  /* Text */
+  --text-primary: #e8eaf4;
+  --text-secondary: #a3a8c3;
+  --text-muted: #6f7597;
+  --text-inverse: #f5f6fa;
+
+  /* Borders */
+  --border-light: #2a2f4a;
+  --border-medium: #3a4066;
+  --border-focus: #5b8def;
+
+  /* Accents (kept vivid on dark) */
+  --accent-blue: #5b9dff;
+  --accent-green: #34d67f;
+  --accent-amber: #fbbf24;
+  --accent-purple: #a78bfa;
+
+  /* Status */
+  --status-correct: #22c55e;
+  --status-wrong: #f04747;
+  --status-unanswered: #6f7597;
+  --status-flagged: #fbbf24;
+
+  /* Shadows — deeper on dark */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.45);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.55);
+  --shadow-xl: 0 20px 60px rgba(0,0,0,0.6);
+
+  color-scheme: dark;
 }
 
 /* -------- Reset & Base -------- */
@@ -842,4 +894,27 @@ h1, h2, h3, h4, h5 {
   .split-view-3__panel {
     max-height: 45vh;
   }
+}
+
+/* -------- Dark Theme: fix hardcoded light spots in globals -------- */
+:root[data-theme="dark"] .radio-option--selected {
+  background: rgba(91, 157, 255, 0.14);
+}
+
+:root[data-theme="dark"] .question-block__instruction {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+:root[data-theme="dark"] .section-tab:hover:not(.section-tab--active) {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+:root[data-theme="dark"] .skeleton {
+  background: linear-gradient(90deg, #1b1f33 25%, #262b45 50%, #1b1f33 75%);
+  background-size: 200% 100%;
+}
+
+:root[data-theme="dark"] .passage-text .highlight {
+  background: rgba(251, 191, 36, 0.28);
+  color: inherit;
 }

@@ -360,8 +360,19 @@
 }
 
 .chart-wrapper {
-  background: white;
+  background: var(--bg-card);
   border: 1px solid var(--border-light);
   border-radius: var(--radius-xl);
   padding: 28px 24px;
+}
+
+/* -------- Dark theme adjustments -------- */
+:root[data-theme="dark"] .home-error {
+  background: rgba(220, 38, 38, 0.12);
+  border-color: rgba(220, 38, 38, 0.4);
+  color: #fca5a5;
+}
+
+:root[data-theme="dark"] .btn-delete-attempt:hover {
+  background: rgba(220, 38, 38, 0.15);
 }
