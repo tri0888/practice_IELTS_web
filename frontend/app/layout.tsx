@@ -23,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
+        <meta name="monetag" content="d98b7363ddeb41155e748377cfd5eec1"></meta>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body>
