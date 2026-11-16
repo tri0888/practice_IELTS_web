@@ -1,5 +1,8 @@
+"use client"
+
 import React from 'react'
 import Link from 'next/link'
+import { Button, Modal, Space } from 'antd'
 import './ResultModal.css'
 
 interface ResultModalProps {
@@ -27,17 +30,24 @@ export default function ResultModal({
   backUrl,
   customMessage,
 }: ResultModalProps) {
-  if (!isOpen) return null
-
   return (
-    <div className="result-modal-overlay">
-      <div className="result-card slide-up" style={{ maxWidth: 420, width: '90%' }}>
+    <Modal
+      open={isOpen}
+      onCancel={onClose}
+      footer={null}
+      centered
+      width={420}
+      maskClosable={false}
+      className="result-modal"
+      destroyOnHidden
+    >
+      <div className="result-card">
         <div style={{ fontSize: '3rem', marginBottom: 8 }}>{emoji}</div>
         <h2 style={{ fontSize: '1.3rem', fontWeight: 700, marginBottom: 4 }}>{title}</h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: 24 }}>
           Cambridge IELTS 11 — Test {testNumber}
         </p>
-        
+
         {customMessage ? (
           <div className="result-card-custom-message">
             {customMessage}
@@ -56,15 +66,15 @@ export default function ResultModal({
           </>
         )}
 
-        <div style={{ display: 'flex', gap: 12, marginTop: 24, justifyContent: 'center' }}>
+        <Space size={12} style={{ marginTop: 24, justifyContent: 'center', width: '100%' }}>
           <Link href={backUrl}>
-            <button className="btn btn-secondary">Go Back</button>
+            <Button size="large">Go Back</Button>
           </Link>
-          <button className="btn btn-primary" onClick={onClose}>
+          <Button type="primary" size="large" onClick={onClose}>
             View Details
-          </button>
-        </div>
+          </Button>
+        </Space>
       </div>
-    </div>
+    </Modal>
   )
 }

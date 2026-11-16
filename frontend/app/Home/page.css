@@ -376,3 +376,35 @@
 :root[data-theme="dark"] .btn-delete-attempt:hover {
   background: rgba(220, 38, 38, 0.15);
 }
+
+/* -------- Ant Design overrides -------- */
+.home-error-alert.ant-alert {
+  margin-bottom: 24px;
+}
+
+.stats-container-row {
+  margin-bottom: 24px;
+}
+
+.stat-widget.ant-card {
+  background: var(--bg-light, #f8fafc);
+  border: 1px solid var(--border-light);
+  text-align: center;
+}
+
+.stat-widget .ant-statistic-title {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.stat-widget .ant-statistic-content {
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.chart-placeholder.ant-empty {
+  flex-direction: column;
+}

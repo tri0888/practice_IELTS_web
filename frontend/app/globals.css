@@ -918,3 +918,28 @@ h1, h2, h3, h4, h5 {
   background: rgba(251, 191, 36, 0.28);
   color: inherit;
 }
+
+/* ============================================
+   Ant Design + MUI integration
+   (AntD is the primary UI kit; legacy classes kept for layout only)
+   ============================================ */
+.ant-btn.btn-submit {
+  padding-block: 0;
+  height: 34px;
+  border: none;
+}
+
+.ant-input.input-answer,
+.ant-input-outlined.input-answer {
+  border-width: 2px;
+}
+
+.ant-btn .MuiSvgIcon-root,
+.ant-input-prefix .MuiSvgIcon-root,
+.ant-menu-item-icon.MuiSvgIcon-root {
+  display: block;
+}
+
+.timer .MuiSvgIcon-root {
+  vertical-align: -4px;
+}

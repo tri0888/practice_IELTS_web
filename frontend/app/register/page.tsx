@@ -2,41 +2,31 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { FormEvent, useState } from 'react'
+import { useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { Alert, Button, Form, Input } from 'antd'
+import PersonRounded from '@mui/icons-material/PersonRounded'
+import EmailRounded from '@mui/icons-material/EmailRounded'
+import LockRounded from '@mui/icons-material/LockRounded'
+import RHFField from '@/components/form/RHFField'
 import '../login/page.css'
+
+type RegisterValues = { name: string; email: string; password: string; confirmPassword: string }
 
 export default function RegisterPage() {
   const router = useRouter()
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
-  const [submitting, setSubmitting] = useState(false)
+  const { control, handleSubmit, getValues, formState: { isSubmitting } } = useForm<RegisterValues>({
+    defaultValues: { name: '', email: '', password: '', confirmPassword: '' },
+  })
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const onSubmit = async ({ name, email, password }: RegisterValues) => {
     setError('')
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      setError('Please enter a valid email address.')
-      return
-    }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters.')
-      return
-    }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match.')
-      return
-    }
-
-    setSubmitting(true)
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), password }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
@@ -45,8 +35,6 @@ export default function RegisterPage() {
       router.replace('/login?registered=1')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed')
-    } finally {
-      setSubmitting(false)
     }
   }
 
@@ -61,61 +49,53 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        <form className="auth-form" onSubmit={handleSubmit}>
-          {error && <div className="auth-message auth-message--error">{error}</div>}
+        <Form layout="vertical" className="auth-form" onFinish={handleSubmit(onSubmit)} requiredMark={false} component="form">
+          {error && <Alert type="error" showIcon message={error} />}
 
-          <label>
-            Name
-            <input
-              type="text"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Your name"
-              autoComplete="name"
-              required
-            />
-          </label>
+          <RHFField control={control} name="name" label="Name" rules={{ required: 'Please enter your name.' }}>
+            <Input size="large" placeholder="Your name" autoComplete="name" prefix={<PersonRounded fontSize="small" />} />
+          </RHFField>
 
-          <label>
-            Email
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="you@example.com"
-              autoComplete="email"
-              required
-            />
-          </label>
+          <RHFField
+            control={control}
+            name="email"
+            label="Email"
+            rules={{
+              required: 'Please enter your email.',
+              pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Please enter a valid email address.' },
+            }}
+          >
+            <Input size="large" type="email" placeholder="you@example.com" autoComplete="email" prefix={<EmailRounded fontSize="small" />} />
+          </RHFField>
 
-          <label>
-            Password
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="At least 6 characters"
-              autoComplete="new-password"
-              required
-            />
-          </label>
+          <RHFField
+            control={control}
+            name="password"
+            label="Password"
+            rules={{
+              required: 'Please enter a password.',
+              minLength: { value: 6, message: 'Password must be at least 6 characters.' },
+            }}
+          >
+            <Input.Password size="large" placeholder="At least 6 characters" autoComplete="new-password" prefix={<LockRounded fontSize="small" />} />
+          </RHFField>
 
-          <label>
-            Confirm Password
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              placeholder="Repeat password"
-              autoComplete="new-password"
-              required
-            />
-          </label>
+          <RHFField
+            control={control}
+            name="confirmPassword"
+            label="Confirm Password"
+            rules={{
+              required: 'Please confirm your password.',
+              validate: value => value === getValues('password') || 'Passwords do not match.',
+            }}
+          >
+            <Input.Password size="large" placeholder="Repeat password" autoComplete="new-password" prefix={<LockRounded fontSize="small" />} />
+          </RHFField>
 
-          <button className="auth-submit" type="submit" disabled={submitting}>
-            {submitting ? 'Creating...' : 'Register'}
-          </button>
-        </form>
+          <Button className="auth-submit" type="primary" htmlType="submit" size="large" block loading={isSubmitting}>
+            {isSubmitting ? 'Creating...' : 'Register'}
+          </Button>
+        </Form>
 
         <p className="auth-footer">
           Already have an account? <Link href="/login">Sign in</Link>

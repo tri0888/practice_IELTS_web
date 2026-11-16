@@ -3,9 +3,20 @@ import { useMemo, useState, useEffect, useRef, Suspense } from 'react'
 import useSWR from 'swr'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { Controller, useForm } from 'react-hook-form'
+import { Alert, Breadcrumb, Button, Checkbox, Empty, Form, Modal, Radio, Skeleton, Space } from 'antd'
+import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded'
+import TuneRounded from '@mui/icons-material/TuneRounded'
 import './tests.css'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
+
+type ExamType = 'all' | 'ielts' | 'toeic'
+type SkillFlags = { listening: boolean; reading: boolean; writing: boolean; speaking: boolean }
+type FilterValues = { type: ExamType; skills: SkillFlags; sortOrder: 'desc' | 'asc' }
+
+const NO_SKILLS: SkillFlags = { listening: false, reading: false, writing: false, speaking: false }
+const typeFromParam = (p: string | null): ExamType => (p === 'ielts' || p === 'toeic' ? p : 'all')
 
 const SKILL_ICONS: Record<string, { emoji: string; label: string; duration: string; questions: string; color: string }> = {
   listening: { emoji: '🎧', label: 'Listening', duration: '30 mins', questions: '40 Qs', color: '#3b82f6' },
@@ -27,15 +38,11 @@ function TestsContent() {
   const [selectedBook, setSelectedBook] = useState<number | null>(null)
   const [selectedToeicYear, setSelectedToeicYear] = useState<'2024' | '2026' | null>(null)
 
-  // Filter states
-  const [tempType, setTempType] = useState<'all' | 'ielts' | 'toeic'>('all')
-  const [tempSkills, setTempSkills] = useState({
-    listening: false,
-    reading: false,
-    writing: false,
-    speaking: false,
+  // Draft filter values live in react-hook-form until "Apply Filters"
+  const { control, handleSubmit, reset, setValue, watch } = useForm<FilterValues>({
+    defaultValues: { type: 'all', skills: { ...NO_SKILLS }, sortOrder: 'desc' },
   })
-  const [tempSortOrder, setTempSortOrder] = useState<'desc' | 'asc'>('desc')
+  const tempType = watch('type')
 
   // Applied filter states
   const [appliedType, setAppliedType] = useState<'all' | 'ielts' | 'toeic'>('all')
@@ -83,24 +90,24 @@ function TestsContent() {
       setSelectedBook(null)
       setSelectedToeicYear(null)
       setIsFiltered(false)
-      setTempType('ielts')
+      setValue('type', 'ielts')
       setAppliedType('ielts')
     } else if (typeParam === 'toeic') {
       setSelectedExam('toeic')
       setSelectedBook(null)
       setSelectedToeicYear(null)
       setIsFiltered(false)
-      setTempType('toeic')
+      setValue('type', 'toeic')
       setAppliedType('toeic')
     } else {
       setSelectedExam(null)
       setSelectedBook(null)
       setSelectedToeicYear(null)
       setIsFiltered(false)
-      setTempType('all')
+      setValue('type', 'all')
       setAppliedType('all')
     }
-  }, [typeParam])
+  }, [typeParam, setValue])
 
   // Group tests by book
   const testsByBook = useMemo(() => {
@@ -149,40 +156,29 @@ function TestsContent() {
   }, [toeicTestsByYear])
 
   // Apply filters handler
-  const handleApplyFilters = () => {
+  const handleApplyFilters = handleSubmit(({ type, skills, sortOrder }) => {
     isApplyingFiltersRef.current = true
-    setAppliedType(tempType)
-    setAppliedSkills({ ...tempSkills })
-    setAppliedSortOrder(tempSortOrder)
+    setAppliedType(type)
+    setAppliedSkills({ ...skills })
+    setAppliedSortOrder(sortOrder)
     setIsFiltered(true)
 
-    // Update URL query parameters based on tempType to match sidebar selection state
+    // Update URL query parameters based on the chosen type to match sidebar selection state
     const params = new URLSearchParams(searchParams.toString())
-    if (tempType === 'all') {
+    if (type === 'all') {
       params.delete('type')
     } else {
-      params.set('type', tempType)
+      params.set('type', type)
     }
     router.push(`/tests?${params.toString()}`)
-  }
+  })
 
   // Clear filters handler
   const handleClearFilters = () => {
-    setTempType(typeParam === 'ielts' ? 'ielts' : typeParam === 'toeic' ? 'toeic' : 'all')
-    setTempSkills({
-      listening: false,
-      reading: false,
-      writing: false,
-      speaking: false,
-    })
-    setTempSortOrder('desc')
-    setAppliedType(typeParam === 'ielts' ? 'ielts' : typeParam === 'toeic' ? 'toeic' : 'all')
-    setAppliedSkills({
-      listening: false,
-      reading: false,
-      writing: false,
-      speaking: false,
-    })
+    const type = typeFromParam(typeParam)
+    reset({ type, skills: { ...NO_SKILLS }, sortOrder: 'desc' })
+    setAppliedType(type)
+    setAppliedSkills({ ...NO_SKILLS })
     setAppliedSortOrder('desc')
     setIsFiltered(false)
   }
@@ -285,138 +281,96 @@ function TestsContent() {
     <div className="tests-layout-container">
       {/* 1. Left Side: Filter Panel */}
       <aside className="tests-filter-panel">
-        <h3 className="filter-panel-title">⚙️ Filters</h3>
-        
-        {/* Test Type filter */}
-        <div className="filter-group">
-          <label className="filter-group-label">Test Type</label>
-          <div className="filter-radio-list">
-            <label className="filter-radio-item">
-              <input 
-                type="radio" 
-                name="test-type" 
-                value="all" 
-                checked={tempType === 'all'} 
-                onChange={() => setTempType('all')} 
-              />
-              <span>All Exams</span>
-            </label>
-            <label className="filter-radio-item">
-              <input 
-                type="radio" 
-                name="test-type" 
-                value="ielts" 
-                checked={tempType === 'ielts'} 
-                onChange={() => setTempType('ielts')}
-              />
-              <span>Cambridge IELTS</span>
-            </label>
-            <label className="filter-radio-item">
-              <input 
-                type="radio" 
-                name="test-type" 
-                value="toeic" 
-                checked={tempType === 'toeic'} 
-                onChange={() => {
-                  setTempType('toeic')
-                  // Automatically clear Writing and Speaking filters when switching to TOEIC
-                  setTempSkills(prev => ({ ...prev, writing: false, speaking: false }))
-                }}
-              />
-              <span>ETS TOEIC</span>
-            </label>
-          </div>
-        </div>
+        <h3 className="filter-panel-title"><TuneRounded fontSize="small" /> Filters</h3>
 
-        {/* Skills filter */}
-        <div className="filter-group">
-          <label className="filter-group-label">Skills</label>
-          <div className="filter-checkbox-list">
-            <label className="filter-checkbox-item">
-              <input 
-                type="checkbox" 
-                checked={tempSkills.listening} 
-                onChange={(e) => setTempSkills({ ...tempSkills, listening: e.target.checked })}
-              />
-              <span>🎧 Listening</span>
-            </label>
-            <label className="filter-checkbox-item">
-              <input 
-                type="checkbox" 
-                checked={tempSkills.reading} 
-                onChange={(e) => setTempSkills({ ...tempSkills, reading: e.target.checked })}
-              />
-              <span>📖 Reading</span>
-            </label>
-            {tempType !== 'toeic' && (
-              <>
-                <label className="filter-checkbox-item">
-                  <input 
-                    type="checkbox" 
-                    checked={tempSkills.writing} 
-                    onChange={(e) => setTempSkills({ ...tempSkills, writing: e.target.checked })}
+        <Form layout="vertical" component="form" onFinish={() => handleApplyFilters()}>
+          {/* Test Type filter */}
+          <Form.Item label="Test Type" className="filter-group">
+            <Controller
+              control={control}
+              name="type"
+              render={({ field }) => (
+                <Radio.Group
+                  className="filter-radio-list"
+                  value={field.value}
+                  onChange={e => {
+                    field.onChange(e.target.value)
+                    // Automatically clear Writing and Speaking filters when switching to TOEIC
+                    if (e.target.value === 'toeic') {
+                      setValue('skills.writing', false)
+                      setValue('skills.speaking', false)
+                    }
+                  }}
+                >
+                  <Space direction="vertical">
+                    <Radio value="all">All Exams</Radio>
+                    <Radio value="ielts">Cambridge IELTS</Radio>
+                    <Radio value="toeic">ETS TOEIC</Radio>
+                  </Space>
+                </Radio.Group>
+              )}
+            />
+          </Form.Item>
+
+          {/* Skills filter */}
+          <Form.Item label="Skills" className="filter-group">
+            <Space direction="vertical" className="filter-checkbox-list">
+              {(['listening', 'reading', 'writing', 'speaking'] as const)
+                .filter(skill => tempType !== 'toeic' || skill === 'listening' || skill === 'reading')
+                .map(skill => (
+                  <Controller
+                    key={skill}
+                    control={control}
+                    name={`skills.${skill}`}
+                    render={({ field }) => (
+                      <Checkbox checked={field.value} onChange={e => field.onChange(e.target.checked)}>
+                        {SKILL_ICONS[skill].emoji} {SKILL_ICONS[skill].label}
+                      </Checkbox>
+                    )}
                   />
-                  <span>✍️ Writing</span>
-                </label>
-                <label className="filter-checkbox-item">
-                  <input 
-                    type="checkbox" 
-                    checked={tempSkills.speaking} 
-                    onChange={(e) => setTempSkills({ ...tempSkills, speaking: e.target.checked })}
-                  />
-                  <span>🎙️ Speaking</span>
-                </label>
-              </>
+                ))}
+            </Space>
+          </Form.Item>
+
+          {/* Sort Order filter */}
+          <Form.Item label="Sort Order" className="filter-group">
+            <Controller
+              control={control}
+              name="sortOrder"
+              render={({ field }) => (
+                <Radio.Group className="filter-radio-list" value={field.value} onChange={e => field.onChange(e.target.value)}>
+                  <Space direction="vertical">
+                    <Radio value="desc">High → Low (19, 18, …11)</Radio>
+                    <Radio value="asc">Low → High (11, 12, …19)</Radio>
+                  </Space>
+                </Radio.Group>
+              )}
+            />
+          </Form.Item>
+
+          {/* Actions */}
+          <div className="filter-actions">
+            <Button type="primary" htmlType="submit" block>
+              Apply Filters
+            </Button>
+            {isFiltered && (
+              <Button block style={{ marginTop: 8 }} onClick={handleClearFilters}>
+                Reset Filters
+              </Button>
             )}
           </div>
-        </div>
-
-        {/* Sort Order filter */}
-        <div className="filter-group">
-          <label className="filter-group-label">Sort Order</label>
-          <div className="filter-radio-list">
-            <label className="filter-radio-item">
-              <input 
-                type="radio" 
-                name="sort-order" 
-                value="desc" 
-                checked={tempSortOrder === 'desc'} 
-                onChange={() => setTempSortOrder('desc')} 
-              />
-              <span>High → Low (19, 18, …11)</span>
-            </label>
-            <label className="filter-radio-item">
-              <input 
-                type="radio" 
-                name="sort-order" 
-                value="asc" 
-                checked={tempSortOrder === 'asc'} 
-                onChange={() => setTempSortOrder('asc')} 
-              />
-              <span>Low → High (11, 12, …19)</span>
-            </label>
-          </div>
-        </div>
-
-        {/* Actions */}
-        <div className="filter-actions">
-          <button className="btn btn-primary" style={{ width: '100%' }} onClick={handleApplyFilters}>
-            Apply Filters
-          </button>
-          {isFiltered && (
-            <button className="btn btn-secondary" style={{ width: '100%', marginTop: '8px' }} onClick={handleClearFilters}>
-              Reset Filters
-            </button>
-          )}
-        </div>
+        </Form>
       </aside>
 
-      {/* 2. Right Side: Tests Content Grid */}
+            {/* 2. Right Side: Tests Content Grid */}
       <div className="tests-content-area">
         {(ieltsError || toeicError) && (
-          <div className="home-error">
-            ⚠️ Failed to load test library. Please ensure the backend server is running.
-          </div>
+          <Alert
+            type="error"
+            showIcon
+            style={{ marginBottom: 24 }}
+            message="Failed to load test library. Please ensure the backend server is running."
+          />
         )}
 
         {/* CASE A: Filter Mode Active */}
@@ -424,21 +378,19 @@ function TestsContent() {
           <div className="fade-in">
             <div className="section-header">
               <h2 className="section-title">🔍 Filtered Results ({filteredIndividualTests.length})</h2>
-              <button className="btn-clear-badge" onClick={handleClearFilters}>Clear Filters ×</button>
+              <Button size="small" danger onClick={handleClearFilters}>Clear Filters ×</Button>
             </div>
 
             {(ieltsLoading || toeicLoading) && (
               <div className="book-grid">
                 {[1, 2, 3, 4].map(i => (
-                  <div key={i} className="skeleton" style={{ height: '140px', borderRadius: 'var(--radius-lg)' }} />
+                  <Skeleton.Node key={i} active className="tests-skeleton-card" />
                 ))}
               </div>
             )}
 
             {!(ieltsLoading || toeicLoading) && filteredIndividualTests.length === 0 ? (
-              <div className="no-filtered-results">
-                <span>📂 No matching tests found. Try adjusting your filter checkboxes.</span>
-              </div>
+              <Empty className="no-filtered-results" description="No matching tests found. Try adjusting your filter checkboxes." />
             ) : (
               <div className="book-grid" style={{ paddingLeft: 0, paddingRight: 0 }}>
                 {filteredIndividualTests.map((t: any) => {
@@ -481,7 +433,7 @@ function TestsContent() {
                     <p className="exam-card__desc">
                       Practice official Cambridge IELTS books 11 to 19. All skills (Listening, Reading, Writing, Speaking) supported.
                     </p>
-                    <button className="btn btn-primary exam-card__btn">Practice IELTS</button>
+                    <Button type="primary" size="large" className="exam-card__btn">Practice IELTS</Button>
                   </div>
 
                   <div className="exam-card exam-card--toeic" onClick={() => router.push('/tests?type=toeic')}>
@@ -491,7 +443,7 @@ function TestsContent() {
                     <p className="exam-card__desc">
                       Practice Listening (LC) and Reading (RC) sections from recent official ETS TOEIC test series.
                     </p>
-                    <button className="btn btn-primary exam-card__btn exam-card__btn--toeic">Practice TOEIC</button>
+                    <Button type="primary" size="large" className="exam-card__btn exam-card__btn--toeic">Practice TOEIC</Button>
                   </div>
                 </div>
               </div>
@@ -506,7 +458,7 @@ function TestsContent() {
                 {ieltsLoading && (
                   <div className="book-choices-grid">
                     {[19, 18, 17, 16, 15, 14, 13, 12, 11].map(i => (
-                      <div key={i} className="skeleton" style={{ height: '140px', borderRadius: 'var(--radius-lg)' }} />
+                      <Skeleton.Node key={i} active className="tests-skeleton-card" />
                     ))}
                   </div>
                 )}
@@ -538,7 +490,7 @@ function TestsContent() {
                 {toeicLoading && (
                   <div className="book-choices-grid book-choices-grid--toeic">
                     {[2026, 2024].map(year => (
-                      <div key={year} className="skeleton" style={{ height: '140px', borderRadius: 'var(--radius-lg)' }} />
+                      <Skeleton.Node key={year} active className="tests-skeleton-card" />
                     ))}
                   </div>
                 )}
@@ -566,12 +518,13 @@ function TestsContent() {
             {selectedExam === 'ielts' && selectedBook !== null && (
               <div className="fade-in">
                 <div className="subpage-header" style={{ marginBottom: '24px' }}>
-                  <button className="btn-back" onClick={() => setSelectedBook(null)}>
-                    ← Back to Books
-                  </button>
-                  <div className="nav-breadcrumb-indicator">
-                    Cambridge IELTS › Cam {selectedBook}
-                  </div>
+                  <Button icon={<ArrowBackRounded fontSize="small" />} onClick={() => setSelectedBook(null)}>
+                    Back to Books
+                  </Button>
+                  <Breadcrumb
+                    className="nav-breadcrumb-indicator"
+                    items={[{ title: 'Cambridge IELTS' }, { title: `Cam ${selectedBook}` }]}
+                  />
                 </div>
 
                 <div className="home-book-header" style={{ marginBottom: '24px' }}>
@@ -600,9 +553,9 @@ function TestsContent() {
                           ))}
                         </div>
                         <div className="test-card__actions" style={{ marginTop: '16px' }}>
-                          <button className="btn btn-primary btn-sm" style={{ width: '100%' }}>
+                          <Button type="primary" block>
                             Choose Skill
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -615,12 +568,13 @@ function TestsContent() {
             {selectedExam === 'toeic' && selectedToeicYear !== null && (
               <div className="fade-in">
                 <div className="subpage-header" style={{ marginBottom: '24px' }}>
-                  <button className="btn-back" onClick={() => setSelectedToeicYear(null)}>
-                    ← Back to Editions
-                  </button>
-                  <div className="nav-breadcrumb-indicator">
-                    ETS TOEIC › ETS {selectedToeicYear}
-                  </div>
+                  <Button icon={<ArrowBackRounded fontSize="small" />} onClick={() => setSelectedToeicYear(null)}>
+                    Back to Editions
+                  </Button>
+                  <Breadcrumb
+                    className="nav-breadcrumb-indicator"
+                    items={[{ title: 'ETS TOEIC' }, { title: `ETS ${selectedToeicYear}` }]}
+                  />
                 </div>
 
                 <div className="home-book-header" style={{ borderLeftColor: selectedToeicYear === '2024' ? '#3b82f6' : 'var(--status-correct, #22c55e)', marginBottom: '24px' }}>
@@ -648,9 +602,13 @@ function TestsContent() {
                           <span>📖 Reading</span>
                         </div>
                         <div className="test-card__actions" style={{ marginTop: '16px' }}>
-                          <button className="btn btn-secondary btn-sm" style={{ width: '100%', background: selectedToeicYear === '2024' ? '#3b82f6' : 'var(--status-correct, #22c55e)', borderColor: selectedToeicYear === '2024' ? '#3b82f6' : 'var(--status-correct, #22c55e)', color: 'white' }}>
+                          <Button
+                            type="primary"
+                            block
+                            style={{ background: selectedToeicYear === '2024' ? '#3b82f6' : 'var(--status-correct, #22c55e)' }}
+                          >
                             Start Test Section
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -665,10 +623,14 @@ function TestsContent() {
       {/* ========================================== */}
       {/* Skill Selection Modal (Popup)              */}
       {/* ========================================== */}
-      {activeSkillModal !== null && (
-        <div className="modal-overlay fade-in" onClick={() => setActiveSkillModal(null)}>
-          <div className="modal-content slide-up-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+      <Modal
+        open={activeSkillModal !== null}
+        onCancel={() => setActiveSkillModal(null)}
+        centered
+        width={640}
+        className="skill-select-modal"
+        footer={<Button onClick={() => setActiveSkillModal(null)}>Close</Button>}
+        title={activeSkillModal && (
               <div>
                 <h3 className="modal-title">
                   {activeSkillModal.examType === 'ielts' 
@@ -681,9 +643,9 @@ function TestsContent() {
                     : `Test ${activeSkillModal.testNum} • Select test section to start practicing`}
                 </p>
               </div>
-              <button className="modal-close" onClick={() => setActiveSkillModal(null)}>×</button>
-            </div>
-            
+        )}
+      >
+        {activeSkillModal && (
             <div className="modal-body">
               {activeSkillModal.examType === 'ielts' ? (
                 /* IELTS Skills Grid inside Modal */
@@ -740,22 +702,15 @@ function TestsContent() {
                 </div>
               )}
             </div>
-            
-            <div className="modal-footer">
-              <button className="btn btn-secondary btn-sm" onClick={() => setActiveSkillModal(null)}>
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
   )
 }
 
 export default function TestsPage() {
   return (
-    <Suspense fallback={<div className="no-filtered-results">Loading practice tests...</div>}>
+    <Suspense fallback={<Skeleton active style={{ padding: 24 }} />}>
       <TestsContent />
     </Suspense>
   )

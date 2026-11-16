@@ -665,3 +665,22 @@
 :root[data-theme="dark"] .selected-question-box__header {
   border-bottom-color: rgba(255, 255, 255, 0.1);
 }
+
+/* -------- Ant Design overrides -------- */
+.history-card-skeleton.ant-skeleton {
+  padding: 12px 16px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  margin-bottom: 12px;
+}
+
+.history-card-score-badge.ant-tag,
+.history-card-status-badge.ant-tag,
+.detail-skill-badge.ant-tag {
+  margin-inline-end: 0;
+  font-weight: 700;
+}
+
+.history-empty-list.ant-empty {
+  padding: 32px 16px;
+}

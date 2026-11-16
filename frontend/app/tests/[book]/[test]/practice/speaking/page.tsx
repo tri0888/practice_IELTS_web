@@ -2,7 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
-import Link from 'next/link'
+import { App, Button, Space, Spin, Tabs, Tag } from 'antd'
+import MicRounded from '@mui/icons-material/MicRounded'
+import StopRounded from '@mui/icons-material/StopRounded'
+import TimerOutlined from '@mui/icons-material/TimerOutlined'
 import PDFViewer from '@/components/PDFViewer/PDFViewer'
 import ResultModal from '@/components/ResultModal/ResultModal'
 import './page.css'
@@ -26,6 +29,7 @@ export default function SpeakingPracticePage() {
   const params = useParams<{ book: string; test: string }>()
   const book = params?.book ?? '11'
   const test = params?.test ?? '1'
+  const { message } = App.useApp()
 
   const [content, setContent] = useState<ContentData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -196,7 +200,7 @@ export default function SpeakingPracticePage() {
       }, 1000)
     } catch (err) {
       console.error("Mic permissions blocked or unavailable:", err)
-      alert("⚠️ Unable to access your microphone. Please grant microphone access to this website and try again.")
+      message.error("Unable to access your microphone. Please grant microphone access to this website and try again.")
     }
   }
 
@@ -244,7 +248,7 @@ export default function SpeakingPracticePage() {
   if (loading) {
     return (
       <div className="container fade-in" style={{ textAlign: 'center', paddingTop: 60 }}>
-        <div style={{ fontSize: '2rem', marginBottom: 16 }}>🎙️</div>
+        <Spin size="large" style={{ marginBottom: 16 }} />
         <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>Loading Speaking Test...</div>
         <div style={{ color: 'var(--text-muted)', marginTop: 8 }}>Initializing Speaking practice room...</div>
       </div>
@@ -258,18 +262,20 @@ export default function SpeakingPracticePage() {
         <div className="exam-bar__info">
           <span className="exam-bar__badge" style={{ backgroundColor: 'var(--accent-purple)' }}>Speaking</span>
           <span>Cambridge IELTS {book} — Test {test}</span>
-          <span className="speaking-recordings-badge">
-            Recordings: {recordings[1] ? '✓ Part 1' : '✗ Part 1'} | {recordings[2] ? '✓ Part 2' : '✗ Part 2'} | {recordings[3] ? '✓ Part 3' : '✗ Part 3'}
-          </span>
+          <Space size={4} style={{ marginLeft: 8 }}>
+            {[1, 2, 3].map(p => (
+              <Tag key={p} color={recordings[p] ? 'success' : 'default'}>{recordings[p] ? '✓' : '✗'} Part {p}</Tag>
+            ))}
+          </Space>
         </div>
         <div className="speaking-timer-wrapper">
           <div className="timer">
-            ⏱️ {formatTime(timeLeft)}
+            <TimerOutlined fontSize="small" /> {formatTime(timeLeft)}
           </div>
           {!isSubmitted && (
-            <button className="btn btn-submit btn-sm" onClick={handleSubmit}>
+            <Button type="primary" className="btn-submit" onClick={handleSubmit}>
               Submit
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -284,21 +290,16 @@ export default function SpeakingPracticePage() {
         {/* Right Panel: Recording Controls */}
         <div className="split-view__panel speaking-right-panel">
           {/* Part Navigation */}
-          <div className="section-tabs" style={{ marginBottom: 20, flexShrink: 0 }}>
-            {['Part 1', 'Part 2', 'Part 3'].map((partLabel, idx) => (
-              <button
-                key={partLabel}
-                className={`section-tab ${activePartIndex === idx ? 'section-tab--active' : ''}`}
-                onClick={() => {
-                  if (isRecording) stopRecording()
-                  setActivePartIndex(idx)
-                  resetPrepTimer()
-                }}
-              >
-                {partLabel}
-              </button>
-            ))}
-          </div>
+          <Tabs
+            style={{ marginBottom: 12, flexShrink: 0 }}
+            activeKey={String(activePartIndex)}
+            onChange={key => {
+              if (isRecording) stopRecording()
+              setActivePartIndex(Number(key))
+              resetPrepTimer()
+            }}
+            items={['Part 1', 'Part 2', 'Part 3'].map((label, idx) => ({ key: String(idx), label }))}
+          />
 
           {/* Part Prompt Info */}
           <div className="speaking-prompt-container">
@@ -321,12 +322,12 @@ export default function SpeakingPracticePage() {
                   {prepTimeLeft}s
                 </div>
                 <div className="speaking-prep-btn-group">
-                  <button className="btn btn-secondary btn-sm" onClick={startPrepTimer} disabled={isPrepActive || prepTimeLeft === 0}>
-                    {isPrepActive ? '⏳ Preparing' : '🏁 Start 1 Min Preparation'}
-                  </button>
-                  <button className="btn btn-secondary btn-sm" onClick={resetPrepTimer}>
+                  <Button onClick={startPrepTimer} disabled={isPrepActive || prepTimeLeft === 0} loading={isPrepActive}>
+                    {isPrepActive ? 'Preparing' : '🏁 Start 1 Min Preparation'}
+                  </Button>
+                  <Button onClick={resetPrepTimer}>
                     Reset
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -337,16 +338,16 @@ export default function SpeakingPracticePage() {
                 <>
                   <div className="record-badge pulse">🔴 RECORDING</div>
                   <div className="speaking-record-status">{formatTime(recordingSeconds)}</div>
-                  <button className="btn btn-danger" onClick={stopRecording} style={{ width: '100%', maxWidth: 200 }}>
-                    ⏹️ Stop Recording
-                  </button>
+                  <Button danger type="primary" size="large" icon={<StopRounded />} onClick={stopRecording} style={{ width: '100%', maxWidth: 200 }}>
+                    Stop Recording
+                  </Button>
                 </>
               ) : (
                 <>
-                  <div style={{ fontSize: '3rem' }}>🎙️</div>
-                  <button className="btn btn-primary" onClick={startRecording} disabled={isSubmitted} style={{ width: '100%', maxWidth: 240 }}>
-                    🎤 Start Recording Part {activePartIndex + 1}
-                  </button>
+                  <MicRounded style={{ fontSize: '3rem', color: 'var(--accent-purple)' }} />
+                  <Button type="primary" size="large" icon={<MicRounded />} onClick={startRecording} disabled={isSubmitted} style={{ width: '100%', maxWidth: 260 }}>
+                    Start Recording Part {activePartIndex + 1}
+                  </Button>
                 </>
               )}
 

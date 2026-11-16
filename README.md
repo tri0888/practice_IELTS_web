@@ -6,19 +6,17 @@ An interactive, premium web application for practicing Cambridge IELTS exams. Th
 
 ## 📂 Codebase Structure
 
-The project is structured logically into three main components:
+The project has three parts: the Node.js API (`backend/`), the Next.js UI (`frontend/`) and the data extraction pipeline (`phase0/`).
 
 ```
-├── backend/                  # FastAPI Python backend service
-│   ├── app/
-│   │   ├── auth.py           # JWT Authentication logic
-│   │   ├── db.py             # MongoDB connection and fallback mechanisms
-│   │   ├── main.py           # REST API routes & PRACTICE_LAYOUTS mapping
-│   │   └── seeder.py         # Seed loader and database helpers
-│   ├── requirements.txt      # Python backend dependencies
-│   └── README.md             # Backend setup guide
+├── backend/                  # Node.js API (Hono + TypeScript), replaces the former FastAPI service
+│   ├── src/                  # app.ts, modules/ (auth, tests, practice, attempts, audio, vocabulary, telegram), db, r2
+│   │   └── data/             # Seed data (layouts, answers, audio assets, vocabulary, r2_keys)
+│   ├── api/index.ts          # Vercel entry (vercel.json)
+│   ├── scripts/              # npm run seed / seed:tts / telegram:webhook
+│   └── tests/                # vitest
 │
-├── frontend/                 # Next.js 14 React frontend web app
+├── frontend/                 # Next.js 16 UI (Ant Design + MUI, react-hook-form); /api/* is rewritten to the backend
 │   ├── app/                  # Next.js App Router folders
 │   │   ├── tests/[test]/     # Test landing & practice routes
 │   │   ├── globals.css       # Core typography, dark mode, split-view styles
@@ -60,56 +58,35 @@ python phase0/generate_all_contents.py
 python phase0/import_cambridge_11.py
 ```
 
-### 2. Set Up the Backend
+### 2. Set Up the Backend (API)
 
-The backend runs on **FastAPI** and requires Python 3.10+. It supports **MongoDB** as a database store, falling back to local memory if MongoDB is unavailable.
+Node.js 20.19+, **MongoDB** and **Cloudflare R2** (PDF/audio storage).
 
 ```bash
-# Go to backend
 cd backend
-
-# Create & activate python virtual environment
-python -m venv .venv
-# On Windows PowerShell:
-.\.venv\Scripts\Activate.ps1
-# On macOS/Linux:
-source .venv/Scripts/activate
-
-# Install requirements
-pip install -r requirements.txt
-
-# Run dev server on port 8000
-uvicorn app.main:app --reload --port 8000
+npm install
+cp .env.example .env.local      # MONGODB_URI, JWT_SECRET, R2_*, (optional) TELEGRAM_*
+npm run seed                    # import layouts, answers, audio assets, vocabulary, users into MongoDB
+npm run dev                     # http://localhost:8000/api
 ```
 
-#### Seed MongoDB (Optional)
-If you have MongoDB running locally (`mongodb://localhost:27017`), seed the DB with test structures:
-```bash
-python -c "from app import seeder, db; seed = seeder.load_seed(); tcoll = db.tests_collection(); acoll = db.audio_collection(); [tcoll.update_one({'test_number': t['test_number']}, {'$set': t}, upsert=True) for t in seed.get('tests',[])]; [acoll.update_one({'file_name': a['file_name']}, {'$set': a}, upsert=True) for a in seed.get('audio_assets',[])]; print('Database Seeded!')"
-```
+Other scripts: `npm test`, `npm run typecheck`, `npm run telegram:webhook` (after deploying),
+`npm run seed:tts` (one-off: flashcard pronunciation voices for the Telegram bot).
 
 ### 3. Set Up the Frontend
 
-The frontend is a **Next.js** web application.
-
 ```bash
-# Go to frontend
 cd frontend
-
-# Install Node dependencies
 npm install
-
-# Start development server on port 3000
-npm run dev
+cp .env.example .env.local      # NEXT_PUBLIC_API_URL (default http://127.0.0.1:8000), JWT_SECRET
+npm run dev                     # http://localhost:3000 — /api/* is proxied to the backend
 ```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ---
 
 ## ⚡ Key Technical Features Implemented
 
 1. **Clean Component Organization**: Extracted massive layout pages into modular UI components (`ListeningPractice`, `ReadingPractice`, `PDFViewer`, `ResultModal`), avoiding code clutter in `app` router files.
-2. **Writing & Speaking Extraction ready**: Text structures for Writing Tasks and Speaking Parts are pre-parsed into the backend and automatically delivered to the frontend under `/api/tests/11/{test}/content` for future UI expansions.
+2. **Writing & Speaking Extraction ready**: Text structures for Writing Tasks and Speaking Parts are pre-parsed into the API and automatically delivered to the frontend under `/api/tests/11/{test}/content` for future UI expansions.
 3. **Advanced PDF Grid Layouts**: Integrated full 3-column split view (Reading Passage, Questions, Answers) with specialized CSS rule configurations to prevent bottom viewport truncation and support page-level scrolling.
 4. **Smart Palette Syncing**: Reading Question Palette links directly to sections and question group tabs, updating PDF views and layouts reactively.

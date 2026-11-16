@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useState, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { Button, Spin, Tabs, Tag } from 'antd'
+import TimerOutlined from '@mui/icons-material/TimerOutlined'
+import { useAnswerForm } from '@/lib/useAnswerForm'
+import ToeicOptionGroup from '@/components/practice/ToeicOptionGroup'
 import ResultModal from '@/components/ResultModal/ResultModal'
 import PDFViewer from '@/components/PDFViewer/PDFViewer'
 import './page.css'
@@ -17,7 +21,7 @@ export default function ETSReadingPracticePage() {
   const year = params?.year ?? '2026'
   const test = params?.test ?? '1'
 
-  const [answers, setAnswers] = useState<Record<number, string>>({})
+  const { control, answers, answerField, resetAnswers } = useAnswerForm()
   const [timeLeft, setTimeLeft] = useState(DURATION_SECONDS)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [activePart, setActivePart] = useState<ActivePart>('part5')
@@ -69,7 +73,7 @@ export default function ETSReadingPracticePage() {
           for (let i = 101; i <= 200; i++) {
             initialAnswers[i] = ''
           }
-          setAnswers(initialAnswers)
+          resetAnswers(initialAnswers)
           setLoading(false)
         }
       } catch (e) {
@@ -80,7 +84,7 @@ export default function ETSReadingPracticePage() {
 
     initData()
     return () => { cancelled = true }
-  }, [test, year])
+  }, [test, year, resetAnswers])
 
   // Timer
   useEffect(() => {
@@ -108,11 +112,6 @@ export default function ETSReadingPracticePage() {
     const m = Math.floor(seconds / 60)
     const s = seconds % 60
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
-  }
-
-  const handleOptionChange = (qNum: number, option: string) => {
-    if (isSubmitted) return
-    setAnswers(prev => ({ ...prev, [qNum]: option }))
   }
 
   const answeredCount = useMemo(() => {
@@ -171,7 +170,7 @@ export default function ETSReadingPracticePage() {
   if (loading) {
     return (
       <div className="container fade-in" style={{ textAlign: 'center', paddingTop: 80 }}>
-        <div style={{ fontSize: '2.5rem', marginBottom: 16 }}>📖</div>
+        <Spin size="large" style={{ marginBottom: 16 }} />
         <div style={{ fontSize: '1.2rem', fontWeight: 600 }}>Loading TOEIC Reading Test...</div>
         <div style={{ color: 'var(--text-muted)', marginTop: 8 }}>Preparing test and materials...</div>
       </div>
@@ -185,18 +184,18 @@ export default function ETSReadingPracticePage() {
         <div className="exam-bar__info">
           <span className="exam-bar__badge" style={{ background: '#22c55e' }}>TOEIC RC</span>
           <span>ETS {year} — Test {test}</span>
-          <span className="listening-answered-badge">
+          <Tag color="green" style={{ marginLeft: 8 }}>
             {answeredCount}/100 completed
-          </span>
+          </Tag>
         </div>
         <div className="listening-timer-wrapper">
           <div className={`timer ${timeLeft <= 300 ? 'timer--danger' : ''}`}>
-            ⏱️ {formatTime(timeLeft)}
+            <TimerOutlined fontSize="small" /> {formatTime(timeLeft)}
           </div>
           {!isSubmitted && (
-            <button className="btn btn-submit btn-sm" style={{ background: '#22c55e', borderColor: '#22c55e' }} onClick={handleSubmit}>
+            <Button type="primary" className="btn-submit" style={{ background: '#22c55e' }} onClick={handleSubmit}>
               Submit
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -221,18 +220,12 @@ export default function ETSReadingPracticePage() {
         {/* Right Panel: Answer Sheet */}
         <div className="split-view__panel listening-split-panel" style={{ padding: '16px 12px 80px' }}>
           {/* Section Navigation Tabs */}
-          <div className="section-tabs listening-tabs-wrapper">
-            {(['part5', 'part6', 'part7'] as const).map(part => (
-              <button
-                key={part}
-                className={`section-tab ${activePart === part ? 'section-tab--active' : ''}`}
-                onClick={() => setActivePart(part)}
-                style={{ textTransform: 'capitalize' }}
-              >
-                {part.replace('part', 'Part ')}
-              </button>
-            ))}
-          </div>
+          <Tabs
+            className="listening-tabs-wrapper"
+            activeKey={activePart}
+            onChange={key => setActivePart(key as ActivePart)}
+            items={(['part5', 'part6', 'part7'] as const).map(part => ({ key: part, label: part.replace('part', 'Part ') }))}
+          />
 
           {/* Answer Inputs Grid */}
           <div className="card" style={{ padding: '12px' }}>
@@ -253,53 +246,23 @@ export default function ETSReadingPracticePage() {
                   <div key={q} className="ets-q-card" style={{
                     ...(showFeedback ? {
                       borderColor: isCorrect ? 'var(--status-correct)' : 'var(--status-wrong)',
-                      background: isCorrect ? '#f0fdf4' : '#fef2f2'
+                      background: isCorrect ? 'rgba(34, 197, 94, 0.08)' : 'rgba(220, 38, 38, 0.08)'
                     } : {})
                   }}>
                     <div className="ets-q-card__header">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span className="ets-q-card__num">Question {q}</span>
-                        <span className="part-badge">{getQuestionPartName(q)}</span>
+                        <Tag>{getQuestionPartName(q)}</Tag>
                       </div>
                     </div>
 
-                    <div className="ets-options-group">
-                      {options.map(opt => {
-                        const optionId = `q-${q}-${opt}`
-                        return (
-                          <div key={opt} style={{ flex: 1 }}>
-                            <input
-                              type="radio"
-                              id={optionId}
-                              name={`question-${q}`}
-                              value={opt}
-                              checked={answers[q] === opt}
-                              onChange={() => handleOptionChange(q, opt)}
-                              disabled={isSubmitted}
-                              className="ets-option-input"
-                            />
-                            <label
-                              htmlFor={optionId}
-                              className="ets-option-label"
-                              style={{
-                                ...(showFeedback && opt === correctAns ? {
-                                  background: 'var(--status-correct, #22c55e)',
-                                  borderColor: 'var(--status-correct, #22c55e)',
-                                  color: 'white'
-                                } : {}),
-                                ...(showFeedback && userAns === opt && !isCorrect ? {
-                                  background: 'var(--status-wrong, #ef4444)',
-                                  borderColor: 'var(--status-wrong, #ef4444)',
-                                  color: 'white'
-                                } : {})
-                              }}
-                            >
-                              {opt}
-                            </label>
-                          </div>
-                        )
-                      })}
-                    </div>
+                    <ToeicOptionGroup
+                      control={control}
+                      name={answerField(q)}
+                      options={options}
+                      disabled={isSubmitted}
+                      correctAnswer={showFeedback ? correctAns : undefined}
+                    />
                   </div>
                 )
               })}

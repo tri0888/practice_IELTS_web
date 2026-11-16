@@ -1,8 +1,8 @@
 # IELTS Platform — Project Rules
 
 Monorepo gồm 2 phần chính:
-- `backend/` — FastAPI, xem `backend/CLAUDE.md` để biết chi tiết setup, DB fallback, seed command.
-- `frontend/` — Next.js, xem `frontend/CLAUDE.md` để biết cấu trúc thư mục, quy tắc render PDF, lệnh build.
+- `backend/`: service API bằng Node.js (Hono + TypeScript, thay cho FastAPI cũ). Xem `backend/CLAUDE.md` để biết cách chạy, cấu trúc module, seed, deploy.
+- `frontend/`: Next.js 16 (UI). Gọi `/api/*`, được rewrite sang backend. Xem `frontend/CLAUDE.md` để biết cấu trúc thư mục, quy tắc render PDF, lệnh build.
 
 ## Communication
 Khi hoàn thành implementation plan, hãy viết vài dòng tóm tắt bằng tiếng Việt để user biết đang làm gì.

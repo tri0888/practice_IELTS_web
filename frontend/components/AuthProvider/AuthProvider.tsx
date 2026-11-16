@@ -1,8 +1,31 @@
 "use client"
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { AUTH_COOKIE, ROLE_COOKIE } from '@/lib/routeGuard'
 
 const TOKEN_KEY = 'practice_hub_token'
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 30
+
+/** Mirror auth state into cookies so proxy.ts can guard routes before render. */
+function writeCookie(name: string, value: string | null) {
+  if (typeof document === 'undefined') return
+  const secure = window.location.protocol === 'https:' ? '; Secure' : ''
+  document.cookie = value
+    ? `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${COOKIE_MAX_AGE}; SameSite=Lax${secure}`
+    : `${name}=; Path=/; Max-Age=0; SameSite=Lax${secure}`
+}
+
+function clearAuthCookies() {
+  writeCookie(AUTH_COOKIE, null)
+  writeCookie(ROLE_COOKIE, null)
+}
+
+function persistSession(token: string | null, role: string | null) {
+  if (token) window.localStorage.setItem(TOKEN_KEY, token)
+  else window.localStorage.removeItem(TOKEN_KEY)
+  writeCookie(AUTH_COOKIE, token)
+  writeCookie(ROLE_COOKIE, token ? role : null)
+}
 
 export type AuthUser = {
   id: string
@@ -45,11 +68,9 @@ export function getAuthUrl(url: string) {
 function shouldAttachAuth(input: RequestInfo | URL) {
   const raw = input instanceof Request ? input.url : input.toString()
   try {
+    // The API is served by this same Next.js app, so only same-origin /api/* calls get the token.
     const url = new URL(raw, window.location.origin)
-    const apiBase = process.env.NEXT_PUBLIC_API_URL
-    const isLocalApi = url.origin === window.location.origin && url.pathname.startsWith('/api/')
-    const isBackendApi = !!apiBase && url.href.startsWith(apiBase)
-    return isLocalApi || isBackendApi
+    return url.origin === window.location.origin && url.pathname.startsWith('/api/')
   } catch {
     return raw.startsWith('/api/')
   }
@@ -91,9 +112,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     patchFetchOnce()
   }, [])
 
+  // Invariant: the auth cookies (read by proxy.ts) always mirror the client's
+  // view of the session. If they disagree, proxy and client redirect each
+  // other forever (/Home <-> /login).
   const refreshUser = useCallback(async () => {
     const token = getStoredToken()
     if (!token) {
+      clearAuthCookies() // stale cookie without a client session
       setUser(null)
       setIsLoading(false)
       return
@@ -104,12 +129,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) {
-        window.localStorage.removeItem(TOKEN_KEY)
+        persistSession(null, null)
         setUser(null)
         return
       }
       const data = await res.json()
+      persistSession(token, data.user?.role ?? null)
       setUser(data.user)
+    } catch (err) {
+      // Backend unreachable: keep the stored token for the next reload, but
+      // drop the cookies so the proxy agrees we are signed out for now.
+      console.error('Unable to verify session', err)
+      clearAuthCookies()
+      setUser(null)
     } finally {
       setIsLoading(false)
     }
@@ -129,13 +161,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!res.ok) {
       throw new Error(data.detail || 'Unable to sign in')
     }
-    window.localStorage.setItem(TOKEN_KEY, data.token)
+    persistSession(data.token, data.user?.role ?? null)
     setUser(data.user)
     return data.user as AuthUser
   }, [])
 
   const logout = useCallback(() => {
-    window.localStorage.removeItem(TOKEN_KEY)
+    persistSession(null, null)
     setUser(null)
     window.location.href = '/login'
   }, [])

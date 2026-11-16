@@ -1219,3 +1219,49 @@
   border-color: rgba(240,71,71,0.45);
   color: #fca5a5;
 }
+
+/* -------- Ant Design overrides -------- */
+.vocab-tabs.ant-tabs {
+  margin-top: 12px;
+}
+
+.vocab-tabs .ant-tabs-tab {
+  font-weight: 700;
+}
+
+.search-row .ant-input-affix-wrapper.search-input {
+  padding: 8px 14px;
+}
+
+.search-row .search-input .ant-input-prefix {
+  color: var(--text-muted);
+  margin-inline-end: 8px;
+}
+
+.filter-tags .ant-tag.filter-tag {
+  margin: 0;
+  user-select: none;
+}
+
+.filter-tags .ant-tag.filter-tag.ant-tag-checkable-checked {
+  background: var(--ielts-red-light);
+  border-color: var(--ielts-red);
+  color: var(--ielts-red);
+}
+
+.vocab-empty.ant-empty {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 60px 24px;
+  margin: 0;
+}
+
+.vocab-word-modal .modal-body {
+  padding: 0;
+}
+
+.ant-input.spelling-input {
+  margin: 0 auto;
+  display: block;
+}

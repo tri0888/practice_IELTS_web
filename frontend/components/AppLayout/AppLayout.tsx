@@ -1,82 +1,80 @@
 "use client"
 
-import React, { Suspense, useEffect, useState } from 'react'
+import React, { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { Avatar, Button, Dropdown, Menu, Spin, Tooltip } from 'antd'
+import type { MenuProps } from 'antd'
+import DashboardRounded from '@mui/icons-material/DashboardRounded'
+import TranslateRounded from '@mui/icons-material/TranslateRounded'
+import AssignmentRounded from '@mui/icons-material/AssignmentRounded'
+import HistoryRounded from '@mui/icons-material/HistoryRounded'
+import LogoutRounded from '@mui/icons-material/LogoutRounded'
+import SchoolRounded from '@mui/icons-material/SchoolRounded'
+import WorkspacePremiumRounded from '@mui/icons-material/WorkspacePremiumRounded'
 import { useAuth } from '@/components/AuthProvider/AuthProvider'
 import ThemeToggle from '@/components/ThemeToggle/ThemeToggle'
+import { LOGIN_BOUNCE_KEY } from '@/lib/routeGuard'
 import './AppLayout.css'
 
 interface AppLayoutProps {
   children: React.ReactNode
 }
 
+const PUBLIC_PAGES = ['/login', '/register', '/pending']
+
 function SidebarMenu() {
   const pathname = usePathname()
   const searchParams = useSearchParams()
-  const [isTestsExpanded, setIsTestsExpanded] = useState(false)
   const activeType = searchParams.get('type')
+  const [openKeys, setOpenKeys] = useState<string[]>([])
 
   useEffect(() => {
-    if (pathname.startsWith('/tests')) {
-      setIsTestsExpanded(true)
-    }
+    if (pathname.startsWith('/tests')) setOpenKeys(['tests'])
   }, [pathname])
 
+  const selectedKey = useMemo(() => {
+    if (pathname === '/Home') return 'home'
+    if (pathname.startsWith('/vocabulary')) return 'vocabulary'
+    if (pathname.startsWith('/tests')) return activeType === 'ielts' || activeType === 'toeic' ? `tests-${activeType}` : 'tests'
+    return ''
+  }, [activeType, pathname])
+
+  const items: MenuProps['items'] = [
+    { key: 'home', icon: <DashboardRounded fontSize="small" />, label: <Link href="/Home">Dashboard</Link> },
+    { key: 'vocabulary', icon: <TranslateRounded fontSize="small" />, label: <Link href="/vocabulary">Vocabulary</Link> },
+    {
+      key: 'tests',
+      icon: <AssignmentRounded fontSize="small" />,
+      label: <Link href="/tests">Practice Tests</Link>,
+      children: [
+        { key: 'tests-ielts', icon: <SchoolRounded fontSize="small" />, label: <Link href="/tests?type=ielts">Cambridge IELTS</Link> },
+        { key: 'tests-toeic', icon: <WorkspacePremiumRounded fontSize="small" />, label: <Link href="/tests?type=toeic">ETS TOEIC</Link> },
+      ],
+    },
+  ]
+
   return (
-    <nav className="sidebar-menu">
-      <Link
-        href="/Home"
-        className={`sidebar-menu-btn ${pathname === '/Home' ? 'active' : ''}`}
-        style={{ textDecoration: 'none' }}
-      >
-        <span className="sidebar-menu-icon">DB</span>
-        <span className="sidebar-menu-label">Dashboard</span>
-      </Link>
+    <Menu
+      className="sidebar-menu"
+      mode="inline"
+      items={items}
+      selectedKeys={[selectedKey]}
+      openKeys={openKeys}
+      onOpenChange={setOpenKeys}
+    />
+  )
+}
 
-      <Link
-        href="/vocabulary"
-        className={`sidebar-menu-btn ${pathname.startsWith('/vocabulary') ? 'active' : ''}`}
-        style={{ textDecoration: 'none' }}
-      >
-        <span className="sidebar-menu-icon">V</span>
-        <span className="sidebar-menu-label">Vocabulary</span>
-      </Link>
-
-      <div className="sidebar-submenu-container">
-        <Link
-          href="/tests"
-          className={`sidebar-menu-btn ${pathname.startsWith('/tests') ? 'active' : ''}`}
-          onClick={() => setIsTestsExpanded(!isTestsExpanded)}
-          style={{ textDecoration: 'none' }}
-        >
-          <span className="sidebar-menu-icon">T</span>
-          <span className="sidebar-menu-label" style={{ flexGrow: 1 }}>Practice Tests</span>
-          <span className={`submenu-arrow ${isTestsExpanded ? 'expanded' : ''}`}>v</span>
-        </Link>
-
-        {isTestsExpanded && (
-          <div className="sidebar-submenu">
-            <Link
-              href="/tests?type=ielts"
-              className={`submenu-item ${pathname.startsWith('/tests') && activeType === 'ielts' ? 'active' : ''}`}
-              style={{ textDecoration: 'none' }}
-            >
-              <span className="submenu-icon">I</span>
-              <span className="submenu-label">Cambridge IELTS</span>
-            </Link>
-            <Link
-              href="/tests?type=toeic"
-              className={`submenu-item submenu-item--toeic ${pathname.startsWith('/tests') && activeType === 'toeic' ? 'active' : ''}`}
-              style={{ textDecoration: 'none' }}
-            >
-              <span className="submenu-icon">E</span>
-              <span className="submenu-label">ETS TOEIC</span>
-            </Link>
-          </div>
-        )}
+function LoadingScreen() {
+  return (
+    <div className="auth-loading-screen">
+      <div className="auth-loading-card">
+        <div className="auth-loading-mark">Hub</div>
+        <Spin size="small" />
+        <div>Checking access...</div>
       </div>
-    </nav>
+    </div>
   )
 }
 
@@ -84,8 +82,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { user, isLoading, isAuthenticated, isApproved, logout } = useAuth()
-  const isPublicPage = pathname === '/login' || pathname === '/register' || pathname === '/pending'
+  const isPublicPage = PUBLIC_PAGES.includes(pathname)
 
+  // proxy.ts guards navigation server-side; this keeps the client in sync
+  // when the session changes without a full navigation (e.g. token expiry).
   useEffect(() => {
     if (isLoading) return
     if (!isAuthenticated && !isPublicPage) {
@@ -98,6 +98,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
     }
     if (isAuthenticated && isApproved && pathname === '/pending') {
       router.replace('/Home')
+      return
+    }
+    // Reached an app page: the proxy accepted our cookies, reset the loop detector.
+    if (isAuthenticated && !isPublicPage) {
+      try { sessionStorage.removeItem(LOGIN_BOUNCE_KEY) } catch { /* ignore */ }
     }
   }, [isApproved, isAuthenticated, isLoading, isPublicPage, pathname, router])
 
@@ -106,19 +111,21 @@ export default function AppLayout({ children }: AppLayoutProps) {
   }
 
   if (isLoading || !isAuthenticated || !isApproved) {
-    return (
-      <div className="auth-loading-screen">
-        <div className="auth-loading-card">
-          <div className="auth-loading-mark">Hub</div>
-          <div>Checking access...</div>
-        </div>
-      </div>
-    )
+    return <LoadingScreen />
   }
 
   const isPracticePage = pathname.includes('/practice') || pathname.includes('/toeic/')
   const showSidebar = !isPracticePage && (pathname === '/Home' || pathname.startsWith('/tests') || pathname.startsWith('/history') || pathname.startsWith('/vocabulary'))
+  const displayName = user?.name || user?.email || ''
 
+  const userMenu: MenuProps = {
+    items: [
+      { key: 'email', label: user?.email, disabled: true },
+      { type: 'divider' },
+      { key: 'logout', icon: <LogoutRounded fontSize="small" />, label: 'Logout', danger: true },
+    ],
+    onClick: ({ key }) => key === 'logout' && logout(),
+  }
 
   return (
     <div className="app-layout-wrapper">
@@ -130,12 +137,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </div>
         </Link>
         <nav className="ielts-header__nav">
-          <Link href="/history">History</Link>
+          <Tooltip title="History">
+            <Link href="/history" className="header-icon-link" aria-label="History">
+              <HistoryRounded fontSize="small" />
+              <span>History</span>
+            </Link>
+          </Tooltip>
           <ThemeToggle />
-          <div className="header-user-chip" title={user?.email || ''}>
-            <span>{user?.name || user?.email}</span>
-            <button type="button" onClick={logout}>Logout</button>
-          </div>
+          <Dropdown menu={userMenu} trigger={['click']} placement="bottomRight">
+            <Button type="text" className="header-user-chip" title={user?.email || ''}>
+              <Avatar size={26} className="header-user-avatar">{displayName.charAt(0).toUpperCase()}</Avatar>
+              <span>{displayName}</span>
+            </Button>
+          </Dropdown>
         </nav>
       </header>
 

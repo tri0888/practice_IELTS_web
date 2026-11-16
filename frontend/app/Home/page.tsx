@@ -1,6 +1,7 @@
 "use client"
 import { useMemo } from 'react'
 import useSWR from 'swr'
+import { Alert, Card, Col, Empty, Row, Statistic } from 'antd'
 import './page.css'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
@@ -57,9 +58,12 @@ export default function DashboardPage() {
   return (
     <div className="dashboard-view fade-in">
       {error && (
-        <div className="home-error">
-          ⚠️ Failed to load history attempts. Please verify that the backend server is running.
-        </div>
+        <Alert
+          className="home-error-alert"
+          type="error"
+          showIcon
+          message="Failed to load history attempts. Please verify that the backend server is running."
+        />
       )}
 
       <div className="dashboard-header">
@@ -68,33 +72,43 @@ export default function DashboardPage() {
       </div>
 
       {/* Overall stats cards */}
-      <div className="stats-container">
-        <div className="stat-widget">
-          <div className="stat-widget__value">{stats.totalCount}</div>
-          <div className="stat-widget__label">Completed Tests</div>
-        </div>
-        <div className="stat-widget">
-          <div className="stat-widget__value" style={{ color: 'var(--ielts-red)' }}>
-            {stats.ieltsAvg !== null ? `${stats.ieltsAvg}%` : '---'}
-          </div>
-          <div className="stat-widget__label">IELTS Avg Accuracy</div>
-        </div>
-        <div className="stat-widget">
-          <div className="stat-widget__value" style={{ color: 'var(--status-correct, #22c55e)' }}>
-            {stats.toeicAvg !== null ? `${stats.toeicAvg}%` : '---'}
-          </div>
-          <div className="stat-widget__label">TOEIC Avg Accuracy</div>
-        </div>
-      </div>
+      <Row gutter={[16, 16]} className="stats-container-row">
+        <Col xs={24} sm={8}>
+          <Card className="stat-widget" variant="borderless">
+            <Statistic title="Completed Tests" value={stats.totalCount} />
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card className="stat-widget" variant="borderless">
+            <Statistic
+              title="IELTS Avg Accuracy"
+              value={stats.ieltsAvg ?? '---'}
+              suffix={stats.ieltsAvg !== null ? '%' : undefined}
+              valueStyle={{ color: 'var(--ielts-red)' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={8}>
+          <Card className="stat-widget" variant="borderless">
+            <Statistic
+              title="TOEIC Avg Accuracy"
+              value={stats.toeicAvg ?? '---'}
+              suffix={stats.toeicAvg !== null ? '%' : undefined}
+              valueStyle={{ color: 'var(--status-correct, #22c55e)' }}
+            />
+          </Card>
+        </Col>
+      </Row>
 
       {/* SVG Trend Chart */}
       <div className="chart-section">
         <h3 className="chart-section-title">📊 Learning Progress (Last 7 Attempts)</h3>
         <div className="chart-wrapper">
           {chartData.length === 0 ? (
-            <div className="chart-placeholder">
-              <span>📊 No practice attempts found. Navigate to the Practice Tests section in the sidebar to start!</span>
-            </div>
+            <Empty
+              className="chart-placeholder"
+              description="No practice attempts found. Navigate to the Practice Tests section in the sidebar to start!"
+            />
           ) : (
             <div>
               <h4 className="chart-subtitle-label">Correct Answers Ratio (%)</h4>

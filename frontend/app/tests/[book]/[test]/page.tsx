@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { Badge, Breadcrumb, Button, Card, Skeleton } from 'antd'
 import './page.css'
 
 const BACKEND = '/api'
@@ -39,9 +40,8 @@ export default function TestDetailPage() {
 
   if (loading) {
     return (
-      <div className="container fade-in" style={{ textAlign: 'center', paddingTop: 60 }}>
-        <div className="skeleton" style={{ width: 200, height: 24, margin: '0 auto 16px' }} />
-        <div className="skeleton" style={{ width: 300, height: 16, margin: '0 auto' }} />
+      <div className="container fade-in" style={{ paddingTop: 60, maxWidth: 420 }}>
+        <Skeleton active title={{ width: 200 }} paragraph={{ rows: 1, width: 300 }} />
       </div>
     )
   }
@@ -49,11 +49,13 @@ export default function TestDetailPage() {
   return (
     <div className="container fade-in">
       {/* Breadcrumb */}
-      <div className="breadcrumb">
-        <Link href="/tests">Practice Tests</Link>
-        <span className="breadcrumb-sep">›</span>
-        <span className="breadcrumb-active">Cambridge IELTS {book} — Test {test}</span>
-      </div>
+      <Breadcrumb
+        className="breadcrumb"
+        items={[
+          { title: <Link href="/tests">Practice Tests</Link> },
+          { title: `Cambridge IELTS ${book} — Test ${test}` },
+        ]}
+      />
 
       {/* Header */}
       <div className="test-detail-header">
@@ -64,12 +66,8 @@ export default function TestDetailPage() {
       {/* Skills Grid */}
       <div className="skills-grid">
         {SKILLS.map((skill) => (
-          <div key={skill.key} className={`card skill-card ${!skill.available ? 'skill-card--unavailable' : ''}`}>
-            {!skill.available && (
-              <div className="badge-upcoming">
-                Upcoming
-              </div>
-            )}
+          <Badge.Ribbon key={skill.key} text="Upcoming" color="gold" style={{ display: skill.available ? 'none' : undefined }}>
+          <Card className={`skill-card ${!skill.available ? 'skill-card--unavailable' : ''}`} style={{ borderTop: `4px solid ${skill.color}` }}>
             <div className="skill-emoji">{skill.emoji}</div>
             <h3 className="skill-title">{skill.label}</h3>
             <div className="skill-stats">
@@ -78,16 +76,17 @@ export default function TestDetailPage() {
             </div>
             {skill.available ? (
               <Link href={`/tests/${book}/${test}/practice/${skill.key}`}>
-                <button className="btn btn-primary" style={{ width: '100%' }}>
+                <Button type="primary" block>
                   Start Practice
-                </button>
+                </Button>
               </Link>
             ) : (
-              <button className="btn btn-secondary" style={{ width: '100%' }} disabled>
+              <Button block disabled>
                 Coming Soon
-              </button>
+              </Button>
             )}
-          </div>
+          </Card>
+          </Badge.Ribbon>
         ))}
       </div>
     </div>

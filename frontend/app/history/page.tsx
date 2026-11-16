@@ -2,6 +2,9 @@
 import { useMemo, useState, useEffect } from 'react'
 import useSWR from 'swr'
 import Link from 'next/link'
+import { App, Button, Empty, Popconfirm, Skeleton, Spin, Tag, Tooltip } from 'antd'
+import ArrowBackRounded from '@mui/icons-material/ArrowBackRounded'
+import DeleteOutlineRounded from '@mui/icons-material/DeleteOutlineRounded'
 import PDFViewer from '@/components/PDFViewer/PDFViewer'
 import './history.css'
 
@@ -91,6 +94,7 @@ function checkAnswerCorrect(userAns: string | undefined, correctAnsStr: string |
 }
 
 export default function HistoryPage() {
+  const { message } = App.useApp()
   const { data: attempts, mutate: mutateAttempts, isLoading } = useSWR('/api/histories', fetcher)
   const [selectedAttemptId, setSelectedAttemptId] = useState<string | null>(null)
   const [selectedQNum, setSelectedQNum] = useState<number | null>(null)
@@ -114,23 +118,23 @@ export default function HistoryPage() {
     }
   }, [completedAttempts, selectedAttemptId])
 
-  const handleDeleteAttempt = async (e: React.MouseEvent, attemptId: string) => {
-    e.stopPropagation()
-    if (window.confirm("Are you sure you want to delete this test attempt from your history?")) {
-      try {
-        const resp = await fetch(`/api/histories/${attemptId}`, { method: 'DELETE' })
-        if (resp.ok) {
-          mutateAttempts()
-          if (selectedAttemptId === attemptId) {
-            setSelectedAttemptId(null)
-            setSelectedQNum(null)
-          }
-        } else {
-          alert("Failed to delete attempt.")
+  // Confirmation is handled by <Popconfirm> around the delete button.
+  const handleDeleteAttempt = async (attemptId: string) => {
+    try {
+      const resp = await fetch(`/api/histories/${attemptId}`, { method: 'DELETE' })
+      if (resp.ok) {
+        mutateAttempts()
+        message.success('Attempt deleted.')
+        if (selectedAttemptId === attemptId) {
+          setSelectedAttemptId(null)
+          setSelectedQNum(null)
         }
-      } catch (err) {
-        console.error("Failed to delete test attempt", err)
+      } else {
+        message.error('Failed to delete attempt.')
       }
+    } catch (err) {
+      console.error("Failed to delete test attempt", err)
+      message.error('Failed to delete attempt.')
     }
   }
 
@@ -221,8 +225,8 @@ export default function HistoryPage() {
       {/* Sidebar List */}
       <div className="history-list-panel">
         <div className="history-list-header">
-          <Link href="/Home" className="btn-back-home">
-            ← Home
+          <Link href="/Home">
+            <Button size="small" icon={<ArrowBackRounded fontSize="small" />} className="btn-back-home">Home</Button>
           </Link>
           <h2 className="history-title">📜 Test History</h2>
           <p className="history-subtitle">Review your completed tests and analyze detailed answers.</p>
@@ -232,19 +236,17 @@ export default function HistoryPage() {
           {isLoading && (
             <div className="history-loading-list">
               {[1, 2, 3].map(i => (
-                <div key={i} className="skeleton history-card-skeleton" />
+                <Skeleton key={i} active paragraph={{ rows: 2 }} className="history-card-skeleton" />
               ))}
             </div>
           )}
 
           {!isLoading && completedAttempts.length === 0 && (
-            <div className="history-empty-list">
-              <span className="empty-icon">📂</span>
-              <p>No test attempts recorded yet.</p>
-              <Link href="/tests" className="btn btn-primary" style={{ marginTop: '16px', display: 'inline-block' }}>
-                Practice Now
+            <Empty className="history-empty-list" description="No test attempts recorded yet.">
+              <Link href="/tests">
+                <Button type="primary">Practice Now</Button>
               </Link>
-            </div>
+            </Empty>
           )}
 
           {!isLoading && completedAttempts.map((att: any) => {
@@ -264,30 +266,35 @@ export default function HistoryPage() {
               >
                 <div className="history-card-header">
                   <div className="history-card-name">{formatTestName(att)}</div>
-                  <button 
-                    className="btn-delete-history"
-                    onClick={(e) => handleDeleteAttempt(e, att.id)}
-                    title="Delete this attempt"
+                  <Popconfirm
+                    title="Delete this attempt?"
+                    description="It will be removed from your history."
+                    okText="Delete"
+                    okButtonProps={{ danger: true }}
+                    onConfirm={() => handleDeleteAttempt(att.id)}
+                    onPopupClick={e => e.stopPropagation()}
                   >
-                    🗑️
-                  </button>
+                    <Button
+                      type="text"
+                      size="small"
+                      danger
+                      className="btn-delete-history"
+                      aria-label="Delete this attempt"
+                      icon={<DeleteOutlineRounded fontSize="small" />}
+                      onClick={e => e.stopPropagation()}
+                    />
+                  </Popconfirm>
                 </div>
                 <div className="history-card-skill">{formatSkillName(att.skill)}</div>
                 
                 <div className="history-card-footer">
                   <span className="history-card-date">{formatDate(att.submitted_at || att.started_at)}</span>
                   {isGraded ? (
-                    <span 
-                      className="history-card-score-badge"
-                      style={{
-                        background: att.skill && att.skill.startsWith('toeic_') ? '#f0fdf4' : '#fef2f2',
-                        color: att.skill && att.skill.startsWith('toeic_') ? '#16a34a' : '#dc2626'
-                      }}
-                    >
+                    <Tag color={isToeic ? 'green' : 'red'} className="history-card-score-badge">
                       {att.result.correct}/{att.result.total} ({percent}%)
-                    </span>
+                    </Tag>
                   ) : (
-                    <span className="history-card-status-badge">Submitted</span>
+                    <Tag>Submitted</Tag>
                   )}
                 </div>
               </div>
@@ -309,7 +316,7 @@ export default function HistoryPage() {
 
         {selectedAttemptId && detailLoading && (
           <div className="history-detail-loading">
-            <div className="spinner" />
+            <Spin size="large" />
             <p>Loading detailed results...</p>
           </div>
         )}
@@ -344,7 +351,7 @@ export default function HistoryPage() {
             <div className="history-detail-scroll-panel fade-in">
               <div className="detail-header">
                 <h3 className="detail-title">{formatTestName(detail)}</h3>
-                <div className="detail-skill-badge">{formatSkillName(detail.skill)}</div>
+                <Tag color={detail.skill?.startsWith('toeic_') ? 'green' : 'red'}>{formatSkillName(detail.skill)}</Tag>
                 <p className="detail-date">Attempted at: {formatDate(detail.submitted_at || detail.started_at)}</p>
               </div>
 
@@ -377,14 +384,21 @@ export default function HistoryPage() {
                 <h4 className="detail-section-title">🎯 Question Map</h4>
                 <div className="question-grid-overview">
                   {parsedQuestions.map((q) => (
-                    <button 
+                    <Tooltip
                       key={q.qNum}
-                      onClick={() => setSelectedQNum(q.qNum)} 
-                      className={`question-circle-item ${q.status} ${selectedQNum === q.qNum ? 'focused' : ''}`}
-                      title={`Question ${q.qNum}: ${q.status === 'correct' ? 'Correct' : q.status === 'incorrect' ? 'Incorrect' : 'Unanswered'}\nYour Answer: ${q.userAns || 'Unanswered'}\nCorrect Answer: ${q.correctAns}`}
+                      title={<>
+                        <div>Question {q.qNum}: {q.status === 'correct' ? 'Correct' : q.status === 'incorrect' ? 'Incorrect' : 'Unanswered'}</div>
+                        <div>Your Answer: {q.userAns || 'Unanswered'}</div>
+                        <div>Correct Answer: {q.correctAns}</div>
+                      </>}
                     >
-                      {q.qNum}
-                    </button>
+                      <button
+                        onClick={() => setSelectedQNum(q.qNum)}
+                        className={`question-circle-item ${q.status} ${selectedQNum === q.qNum ? 'focused' : ''}`}
+                      >
+                        {q.qNum}
+                      </button>
+                    </Tooltip>
                   ))}
                 </div>
                 <div className="question-grid-legend">
@@ -400,9 +414,11 @@ export default function HistoryPage() {
                   <div className={`selected-question-box ${selectedQuestionObj.status}`}>
                     <div className="selected-question-box__header">
                       <span className="selected-question-title">Question {selectedQuestionObj.qNum}</span>
-                      <span className={`selected-question-badge ${selectedQuestionObj.status}`}>
+                      <Tag
+                        color={selectedQuestionObj.status === 'correct' ? 'success' : selectedQuestionObj.status === 'incorrect' ? 'error' : 'default'}
+                      >
                         {selectedQuestionObj.status === 'correct' ? '✓ Correct' : selectedQuestionObj.status === 'incorrect' ? '✗ Incorrect' : '- Unanswered'}
-                      </span>
+                      </Tag>
                     </div>
                     <div className="selected-question-compare">
                       <div className="compare-item">

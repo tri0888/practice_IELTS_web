@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { Controller } from 'react-hook-form'
+import { Alert, Button, Input, Result, Spin, Tabs, Tag } from 'antd'
+import TimerOutlined from '@mui/icons-material/TimerOutlined'
+import { useAnswerForm } from '@/lib/useAnswerForm'
 import PDFViewer from '@/components/PDFViewer/PDFViewer'
 import ResultModal from '@/components/ResultModal/ResultModal'
 import './page.css'
@@ -33,7 +37,8 @@ export default function WritingPracticePage() {
   const [practiceLayout, setPracticeLayout] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [activeTaskIndex, setActiveTaskIndex] = useState(0)
-  const [essays, setEssays] = useState<Record<number, string>>({ 1: '', 2: '' })
+  // Essays are form fields (task number -> text) managed by react-hook-form
+  const { control, answers: essays, answerField } = useAnswerForm({ 1: '', 2: '' })
   const [timeLeft, setTimeLeft] = useState(DURATION_SECONDS)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [attemptId, setAttemptId] = useState<string | null>(null)
@@ -118,8 +123,8 @@ export default function WritingPracticePage() {
   const timerClass = timeLeft <= 120 ? 'timer timer--danger' : timeLeft <= 600 ? 'timer timer--warning' : 'timer'
 
   // Word count helper
-  const getWordCount = (text: string) => {
-    const trimmed = text.trim()
+  const getWordCount = (text: string | undefined) => {
+    const trimmed = (text ?? '').trim()
     if (!trimmed) return 0
     return trimmed.split(/\s+/).filter(w => w.length > 0).length
   }
@@ -181,7 +186,7 @@ export default function WritingPracticePage() {
   if (loading) {
     return (
       <div className="container fade-in" style={{ textAlign: 'center', paddingTop: 60 }}>
-        <div style={{ fontSize: '2rem', marginBottom: 16 }}>✍️</div>
+        <Spin size="large" style={{ marginBottom: 16 }} />
         <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>Loading Writing Test...</div>
         <div style={{ color: 'var(--text-muted)', marginTop: 8 }}>Loading writing test...</div>
       </div>
@@ -191,12 +196,11 @@ export default function WritingPracticePage() {
   if (!content || !content.writing) {
     return (
       <div className="container">
-        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-          <p>❌ Failed to load Writing test content.</p>
-          <Link href={`/tests/${book}/${test}`}>
-            <button className="btn btn-primary" style={{ marginTop: 16 }}>Back</button>
-          </Link>
-        </div>
+        <Result
+          status="error"
+          title="Failed to load Writing test content."
+          extra={<Link href={`/tests/${book}/${test}`}><Button type="primary">Back</Button></Link>}
+        />
       </div>
     )
   }
@@ -214,18 +218,18 @@ export default function WritingPracticePage() {
         <div className="exam-bar__info">
           <span className="exam-bar__badge" style={{ backgroundColor: 'var(--accent-orange)' }}>Writing</span>
           <span>Cambridge IELTS {book} — Test {test}</span>
-          <span className="writing-word-count-badge-top">
+          <Tag color="orange" style={{ marginLeft: 8 }}>
             Word Count: {getWordCount(essays[1])} (Task 1) | {getWordCount(essays[2])} (Task 2)
-          </span>
+          </Tag>
         </div>
         <div className="writing-timer-wrapper">
           <div className={timerClass}>
-            ⏱️ {formatTime(timeLeft)}
+            <TimerOutlined fontSize="small" /> {formatTime(timeLeft)}
           </div>
           {!isSubmitted && (
-            <button className="btn btn-submit btn-sm" onClick={handleSubmit}>
+            <Button type="primary" className="btn-submit" onClick={handleSubmit}>
               Submit
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -234,23 +238,15 @@ export default function WritingPracticePage() {
         {/* Left Panel: Prompt or Model Answer PDF */}
         <div className="split-view__panel writing-left-panel">
           {/* PDF Viewer Tabs (Prompt / Model Answer) */}
-          <div className="section-tabs writing-left-tabs">
-            <button
-              className={`section-tab ${viewMode === 'prompt' ? 'section-tab--active' : ''}`}
-              onClick={() => setViewMode('prompt')}
-            >
-              📄 Writing Prompt
-            </button>
-            {isSubmitted && (
-              <button
-                className={`section-tab ${viewMode === 'model' ? 'section-tab--active' : ''}`}
-                onClick={() => setViewMode('model')}
-                style={{ borderLeft: '1px solid var(--border-light)' }}
-              >
-                🎓 Model Answer
-              </button>
-            )}
-          </div>
+          <Tabs
+            className="writing-left-tabs"
+            activeKey={viewMode}
+            onChange={key => setViewMode(key as 'prompt' | 'model')}
+            items={[
+              { key: 'prompt', label: '📄 Writing Prompt' },
+              ...(isSubmitted ? [{ key: 'model', label: '🎓 Model Answer' }] : []),
+            ]}
+          />
           <PDFViewer book={book} test={parseInt(test, 10)} partKey={viewMode === 'model' ? undefined : `writing_${activeTaskIndex + 1}`} pages={activePages} style={{ flexGrow: 1, padding: 4 }} />
         </div>
 
@@ -260,20 +256,15 @@ export default function WritingPracticePage() {
         {/* Right Panel: Editor Area */}
         <div className="split-view__panel writing-right-panel">
           {/* Task Switches */}
-          <div className="section-tabs" style={{ marginBottom: 16, flexShrink: 0 }}>
-            {tasks.map((task, idx) => (
-              <button
-                key={task.task_number}
-                className={`section-tab ${activeTaskIndex === idx ? 'section-tab--active' : ''}`}
-                onClick={() => {
-                  setActiveTaskIndex(idx)
-                  if (!isSubmitted) setViewMode('prompt')
-                }}
-              >
-                Writing Task {task.task_number}
-              </button>
-            ))}
-          </div>
+          <Tabs
+            style={{ marginBottom: 8, flexShrink: 0 }}
+            activeKey={String(activeTaskIndex)}
+            onChange={key => {
+              setActiveTaskIndex(Number(key))
+              if (!isSubmitted) setViewMode('prompt')
+            }}
+            items={tasks.map((task, idx) => ({ key: String(idx), label: `Writing Task ${task.task_number}` }))}
+          />
 
           {/* Text Editor Container */}
           <div className="writing-editor-container">
@@ -281,29 +272,38 @@ export default function WritingPracticePage() {
               <h3 className="writing-editor-title">
                 Type your essay for Task {activeTaskIndex + 1}
               </h3>
-              <div className={`writing-word-count-badge ${isWordCountMet ? 'writing-word-count-badge--complete' : 'writing-word-count-badge--incomplete'}`}>
+              <Tag
+                color={isWordCountMet ? 'success' : 'warning'}
+              >
                 ✍️ {currentWordCount} / {minWords} words
-              </div>
+              </Tag>
             </div>
 
-            <textarea
-              value={currentEssayText}
-              onChange={e => setEssays(prev => ({ ...prev, [activeTaskIndex + 1]: e.target.value }))}
-              placeholder={`Type your Writing Task ${activeTaskIndex + 1} essay here. Remember it should be at least ${minWords} words long...`}
-              disabled={isSubmitted}
-              className="writing-textarea"
+            <Controller
+              key={activeTaskIndex}
+              control={control}
+              name={answerField(activeTaskIndex + 1)}
+              render={({ field }) => (
+                <Input.TextArea
+                  {...field}
+                  value={field.value ?? ''}
+                  placeholder={`Type your Writing Task ${activeTaskIndex + 1} essay here. Remember it should be at least ${minWords} words long...`}
+                  disabled={isSubmitted}
+                  className="writing-textarea"
+                  spellCheck={false}
+                />
+              )}
             />
 
             {/* Post-submission comparison card */}
             {isSubmitted && (
-              <div className="card writing-model-answer-info-card">
-                <h4 className="writing-model-answer-info-card__title">
-                  💡 Official Cambridge Model Answer
-                </h4>
-                <p className="writing-model-answer-info-card__desc">
-                  Click on the <strong>"Model Answer"</strong> tab on the left to compare your essay with the official model answer and read the detailed examiner comments.
-                </p>
-              </div>
+              <Alert
+                className="writing-model-answer-info-card"
+                type="info"
+                showIcon
+                message="Official Cambridge Model Answer"
+                description={<>Click on the <strong>&quot;Model Answer&quot;</strong> tab on the left to compare your essay with the official model answer and read the detailed examiner comments.</>}
+              />
             )}
           </div>
         </div>

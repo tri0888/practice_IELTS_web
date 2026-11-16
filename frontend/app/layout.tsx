@@ -1,4 +1,6 @@
 import './globals.css'
+import { AntdRegistry } from '@ant-design/nextjs-registry'
+import UIProvider from '@/components/Providers/UIProvider'
 import AppLayout from '@/components/AppLayout/AppLayout'
 import { AuthProvider } from '@/components/AuthProvider/AuthProvider'
 
@@ -27,9 +29,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body>
-        <AuthProvider>
-          <AppLayout>{children}</AppLayout>
-        </AuthProvider>
+        {/* Ant Design (primary) + MUI (secondary) share one light/dark mode via UIProvider */}
+        <AntdRegistry>
+          <UIProvider>
+            <AuthProvider>
+              <AppLayout>{children}</AppLayout>
+            </AuthProvider>
+          </UIProvider>
+        </AntdRegistry>
       </body>
     </html>
   )

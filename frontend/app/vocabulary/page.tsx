@@ -2,6 +2,10 @@
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import useSWR from 'swr'
+import { Controller, useForm } from 'react-hook-form'
+import { Alert, App, Button, Checkbox, Empty, Input, Modal, Pagination, Progress, Segmented, Select, Spin, Tabs, Tag } from 'antd'
+import SearchRounded from '@mui/icons-material/SearchRounded'
+import VolumeUpRounded from '@mui/icons-material/VolumeUpRounded'
 import './page.css'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
@@ -133,29 +137,16 @@ export default function VocabularyPage() {
         )}
 
         {/* Tabs Bar Navigation */}
-        <div className="vocab-tabs-nav">
-          <button
-            type="button"
-            className={`vocab-tab-btn ${activeTab === 'library' ? 'active' : ''}`}
-            onClick={() => setActiveTab('library')}
-          >
-            <span>📑</span> Library
-          </button>
-          <button
-            type="button"
-            className={`vocab-tab-btn ${activeTab === 'flashcards' ? 'active' : ''}`}
-            onClick={() => setActiveTab('flashcards')}
-          >
-            <span>🎴</span> Flashcards
-          </button>
-          <button
-            type="button"
-            className={`vocab-tab-btn ${activeTab === 'practice' ? 'active' : ''}`}
-            onClick={() => setActiveTab('practice')}
-          >
-            <span>✏️</span> Practice Games
-          </button>
-        </div>
+        <Tabs
+          className="vocab-tabs"
+          activeKey={activeTab}
+          onChange={key => setActiveTab(key as typeof activeTab)}
+          items={[
+            { key: 'library', label: <><span>📑</span> Library</> },
+            { key: 'flashcards', label: <><span>🎴</span> Flashcards</> },
+            { key: 'practice', label: <><span>✏️</span> Practice Games</> },
+          ]}
+        />
 
         {/* Content Render Area depending on Active Tab */}
         <div className="vocab-tab-content">
@@ -203,11 +194,16 @@ function LibraryView({
   updateWordProgress,
   mutateStats,
 }: LibraryViewProps) {
+  const { message } = App.useApp()
   const [page, setPage] = useState(1)
-  const [searchVal, setSearchVal] = useState('')
+  // Search / POS / status filters are a react-hook-form; the list re-queries as they change
+  const { control, watch } = useForm<{ search: string; pos: string; status: string }>({
+    defaultValues: { search: '', pos: '', status: '' },
+  })
+  const searchVal = watch('search')
+  const posFilter = watch('pos')
+  const statusFilter = watch('status')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [posFilter, setPosFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
   const [activeWord, setActiveWord] = useState<WordItem | null>(null)
   
   // Bulk selection of mastered vocabs to unmaster them
@@ -223,19 +219,17 @@ function LibraryView({
   }, [searchVal])
 
   // Reset page when POS or status filters update
-  const handlePosChange = (pos: string) => {
-    setPosFilter(pos)
+  useEffect(() => {
     setPage(1)
-  }
+  }, [posFilter])
 
-  const handleStatusChange = (status: string) => {
-    setStatusFilter(status)
+  useEffect(() => {
     setSelectedVocabs(new Set())
     setPage(1)
-  }
+  }, [statusFilter])
 
   // API query
-  const queryStr = `/api/vocabulary?search=${debouncedSearch}&pos=${posFilter}&status=${statusFilter}&page=${page}&limit=24`
+  const queryStr = `/api/vocabulary?search=${encodeURIComponent(debouncedSearch)}&pos=${encodeURIComponent(posFilter)}&status=${statusFilter}&page=${page}&limit=24`
   const { data, error, mutate: mutateList } = useSWR(queryStr, fetcher)
 
   const handleUpdateStatus = async (vocab: string, nextStatus: string) => {
@@ -298,11 +292,11 @@ function LibraryView({
         mutateList()
         mutateStats()
       } else {
-        alert('Failed to update selected words status.')
+        message.error('Failed to update selected words status.')
       }
     } catch (err) {
       console.error(err)
-      alert('Error connecting to backend.')
+      message.error('Error connecting to backend.')
     }
   }
 
@@ -346,103 +340,78 @@ function LibraryView({
       {/* Search & Filter Panel */}
       <div className="library-controls">
         <div className="search-row">
-          <div className="search-input-wrapper">
-            <svg
-              className="search-icon-svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input
-              type="text"
-              className="search-input"
-              placeholder="Search words or Vietnamese definitions..."
-              value={searchVal}
-              onChange={e => setSearchVal(e.target.value)}
-            />
-          </div>
+          <Controller
+            control={control}
+            name="search"
+            render={({ field }) => (
+              <Input
+                {...field}
+                size="large"
+                allowClear
+                className="search-input"
+                prefix={<SearchRounded fontSize="small" />}
+                placeholder="Search words or Vietnamese definitions..."
+              />
+            )}
+          />
         </div>
 
         {/* Word POS filters */}
         {stats && stats.unique_pos && stats.unique_pos.length > 0 && (
           <div className="filter-group">
             <div className="filter-label">Word Types:</div>
-            <div className="filter-tags">
-              <button
-                type="button"
-                className={`filter-tag ${posFilter === '' ? 'active' : ''}`}
-                onClick={() => handlePosChange('')}
-              >
-                All
-              </button>
-              {stats.unique_pos.map((pos: string) => (
-                <button
-                  type="button"
-                  key={pos}
-                  className={`filter-tag ${posFilter === pos ? 'active' : ''}`}
-                  onClick={() => handlePosChange(pos)}
-                >
-                  {pos}
-                </button>
-              ))}
-            </div>
+            <Controller
+              control={control}
+              name="pos"
+              render={({ field }) => (
+                <div className="filter-tags">
+                  {['', ...stats.unique_pos].map((pos: string) => (
+                    <Tag.CheckableTag
+                      key={pos || 'all'}
+                      className="filter-tag"
+                      checked={field.value === pos}
+                      onChange={() => field.onChange(pos)}
+                    >
+                      {pos || 'All'}
+                    </Tag.CheckableTag>
+                  ))}
+                </div>
+              )}
+            />
           </div>
         )}
 
         {/* Progress Filters */}
         <div className="filter-group">
           <div className="filter-label">Learning Status:</div>
-          <div className="filter-tags">
-            <button
-              type="button"
-              className={`filter-tag ${statusFilter === '' ? 'active' : ''}`}
-              onClick={() => handleStatusChange('')}
-            >
-              All
-            </button>
-            <button
-              type="button"
-              className={`filter-tag ${statusFilter === 'unlearned' ? 'active' : ''}`}
-              onClick={() => handleStatusChange('unlearned')}
-            >
-              🆕 Unlearned
-            </button>
-            <button
-              type="button"
-              className={`filter-tag ${statusFilter === 'learning' ? 'active' : ''}`}
-              onClick={() => handleStatusChange('learning')}
-            >
-              ✏️ Learning
-            </button>
-            <button
-              type="button"
-              className={`filter-tag ${statusFilter === 'mastered' ? 'active' : ''}`}
-              onClick={() => handleStatusChange('mastered')}
-            >
-              ✅ Mastered
-            </button>
-          </div>
+          <Controller
+            control={control}
+            name="status"
+            render={({ field }) => (
+              <Segmented
+                value={field.value}
+                onChange={value => field.onChange(value)}
+                options={[
+                  { value: '', label: 'All' },
+                  { value: 'unlearned', label: '🆕 Unlearned' },
+                  { value: 'learning', label: '✏️ Learning' },
+                  { value: 'mastered', label: '✅ Mastered' },
+                ]}
+              />
+            )}
+          />
         </div>
       </div>
 
-      {/* Grid of Vocabulary cards */}
+            {/* Grid of Vocabulary cards */}
       {error && (
-        <div style={{ textAlign: 'center', padding: '40px', color: 'var(--status-wrong)' }}>
-          ⚠️ Failed to fetch words list. Please ensure backend server is online.
-        </div>
+        <Alert type="error" showIcon message="Failed to fetch words list. Please ensure backend server is online." />
       )}
 
       {!data && !error && (
         <div style={{ textAlign: 'center', padding: '80px', fontWeight: 600, color: 'var(--text-muted)' }}>
-          Loading vocabulary directory...
+          <Spin size="large" />
+          <div style={{ marginTop: 12 }}>Loading vocabulary directory...</div>
         </div>
       )}
 
@@ -451,23 +420,22 @@ function LibraryView({
           {/* Bulk Action Header bar */}
           {isBulkSelectMode && (
             <div className="bulk-actions-bar animate-slide-down" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-              <button 
-                type="button" 
-                className="pagination-btn" 
-                onClick={handleToggleSelectAll}
-                style={{ padding: '8px 16px', fontSize: '0.88rem', height: 'auto', minHeight: 'auto' }}
+              <Checkbox
+                checked={isAllSelected}
+                indeterminate={!isAllSelected && shownVocabs.some(v => selectedVocabs.has(v))}
+                onChange={handleToggleSelectAll}
               >
-                {isAllSelected ? '☐ Deselect All' : '☑ Select All'}
-              </button>
+                {isAllSelected ? 'Deselect All' : 'Select All'}
+              </Checkbox>
               
               {selectedVocabs.size > 0 ? (
                 <>
                   <div className="bulk-actions-info" style={{ flex: 1, margin: 0 }}>
                     Selected <strong>{selectedVocabs.size}</strong> word(s) to unmark
                   </div>
-                  <button type="button" className="bulk-action-btn" onClick={handleBulkStatusUpdate}>
+                  <Button type="primary" danger onClick={handleBulkStatusUpdate}>
                     {isMasteredMode ? 'Unmark Mastered' : 'Unmark Learning'}
-                  </button>
+                  </Button>
                 </>
               ) : (
                 <div style={{ flex: 1, fontSize: '0.88rem', color: 'var(--text-muted)' }}>
@@ -484,18 +452,10 @@ function LibraryView({
           )}
 
           {data.items.length === 0 ? (
-            <div
-              style={{
-                background: 'white',
-                border: '1px solid var(--border-light)',
-                borderRadius: 'var(--radius-md)',
-                padding: '80px',
-                textAlign: 'center',
-                color: 'var(--text-secondary)',
-              }}
-            >
-              🔍 No vocabulary words found matching these filters. Try refining your search query.
-            </div>
+            <Empty
+              className="vocab-empty"
+              description="No vocabulary words found matching these filters. Try refining your search query."
+            />
           ) : (
             <div className="words-grid">
               {data.items.map((item: WordItem) => {
@@ -511,9 +471,7 @@ function LibraryView({
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         {isBulkSelectMode && (
                           <div className="card-checkbox-wrapper" onClick={(e) => e.stopPropagation()}>
-                            <input
-                              type="checkbox"
-                              className="card-checkbox"
+                            <Checkbox
                               checked={isChecked}
                               onChange={() => handleCheckboxChange(item.vocab)}
                             />
@@ -548,17 +506,17 @@ function LibraryView({
                       </div>
 
                       <div className="word-actions">
-                        <button
-                          type="button"
+                        <Button
+                          type="text"
+                          shape="circle"
                           className="action-btn"
                           title="Listen pronunciation"
+                          icon={<VolumeUpRounded fontSize="small" />}
                           onClick={(e) => {
                             e.stopPropagation()
                             speakWord(item.vocab)
                           }}
-                        >
-                          🔊
-                        </button>
+                        />
                       </div>
                     </div>
                   </div>
@@ -570,50 +528,38 @@ function LibraryView({
           {/* Pagination bar */}
           {data.total > data.limit && (
             <div className="pagination-container">
-              <button
-                type="button"
-                className="pagination-btn"
-                onClick={() => setPage(p => Math.max(1, p - 1))}
-                disabled={page === 1}
-              >
-                Previous
-              </button>
-              <span className="pagination-info">
-                Page {page} of {Math.ceil(data.total / data.limit)}
-              </span>
-              <button
-                type="button"
-                className="pagination-btn"
-                onClick={() => setPage(p => p + 1)}
-                disabled={page >= Math.ceil(data.total / data.limit)}
-              >
-                Next
-              </button>
+              <Pagination
+                current={page}
+                pageSize={data.limit}
+                total={data.total}
+                showSizeChanger={false}
+                onChange={setPage}
+              />
             </div>
           )}
         </>
       )}
 
       {/* Modal Drawer Details */}
-      {activeWord && (
-        <div className="modal-overlay" onClick={() => setActiveWord(null)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div className="modal-header-actions">
-                <button
-                  type="button"
-                  className="action-btn"
-                  style={{ fontSize: '1.25rem' }}
-                  onClick={() => speakWord(activeWord.vocab)}
-                >
-                  🔊
-                </button>
-              </div>
-              <button type="button" className="modal-close-btn" onClick={() => setActiveWord(null)}>
-                &times;
-              </button>
-            </div>
-
+      <Modal
+        open={!!activeWord}
+        onCancel={() => setActiveWord(null)}
+        footer={null}
+        centered
+        width={520}
+        className="vocab-word-modal"
+        title={activeWord && (
+          <Button
+            type="text"
+            shape="circle"
+            className="action-btn"
+            aria-label="Listen pronunciation"
+            icon={<VolumeUpRounded />}
+            onClick={() => speakWord(activeWord.vocab)}
+          />
+        )}
+      >
+        {activeWord && (
             <div className="modal-body">
               <div className="detail-word-header">
                 <div className="detail-vocab-row">
@@ -634,29 +580,16 @@ function LibraryView({
 
               <div className="detail-section">
                 <div className="detail-section-title">Mark Mastery:</div>
-                <div className="status-toggles">
-                  <button
-                    type="button"
-                    className={`status-toggle-btn ${activeWord.status === 'unlearned' ? 'active-unlearned' : ''}`}
-                    onClick={() => handleUpdateStatus(activeWord.vocab, 'unlearned')}
-                  >
-                    Unlearned
-                  </button>
-                  <button
-                    type="button"
-                    className={`status-toggle-btn ${activeWord.status === 'learning' ? 'active-learning' : ''}`}
-                    onClick={() => handleUpdateStatus(activeWord.vocab, 'learning')}
-                  >
-                    Learning
-                  </button>
-                  <button
-                    type="button"
-                    className={`status-toggle-btn ${activeWord.status === 'mastered' ? 'active-mastered' : ''}`}
-                    onClick={() => handleUpdateStatus(activeWord.vocab, 'mastered')}
-                  >
-                    Mastered
-                  </button>
-                </div>
+                <Segmented
+                  block
+                  value={activeWord.status}
+                  onChange={value => handleUpdateStatus(activeWord.vocab, value as string)}
+                  options={[
+                    { value: 'unlearned', label: 'Unlearned' },
+                    { value: 'learning', label: 'Learning' },
+                    { value: 'mastered', label: 'Mastered' },
+                  ]}
+                />
               </div>
 
               <div className="detail-section">
@@ -677,10 +610,95 @@ function LibraryView({
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </div>
+  )
+}
+
+/* ==========================================================================
+   Shared deck setup form (Flashcards + Practice Games) — react-hook-form
+   ========================================================================== */
+type DeckSetup = { mode: 'random' | 'studied'; pos: string; limit: number }
+
+function useDeckSetup() {
+  const form = useForm<DeckSetup>({ defaultValues: { mode: 'random', pos: '', limit: 15 } })
+  const [mode, pos, limit] = form.watch(['mode', 'pos', 'limit'])
+  return { form, mode, posFilter: pos, limit }
+}
+
+function DeckSetupFields({
+  form,
+  stats,
+  labels,
+}: {
+  form: ReturnType<typeof useDeckSetup>['form']
+  stats: any
+  labels: { mode: string; studied: string; pos: string; limit: string; limitUnit: string }
+}) {
+  const { control, setValue, getValues, watch } = form
+  const mode = watch('mode')
+  const posOptions: string[] = (mode === 'studied' ? stats?.studied_pos : stats?.unique_pos) || []
+  const hasStudied = !!stats?.studied_count
+
+  return (
+    <>
+      <div className="filter-group">
+        <span className="filter-label">{labels.mode}</span>
+        <Controller
+          control={control}
+          name="mode"
+          render={({ field }) => (
+            <Segmented
+              value={field.value}
+              onChange={value => {
+                field.onChange(value)
+                // Reset POS if the new mode does not offer the current category
+                const pos = getValues('pos')
+                if (value === 'studied' && stats?.studied_pos && pos !== '' && !stats.studied_pos.includes(pos)) {
+                  setValue('pos', '')
+                }
+              }}
+              options={[
+                { value: 'random', label: 'All Words' },
+                { value: 'studied', label: `${labels.studied} (${stats?.studied_count || 0})`, disabled: !hasStudied },
+              ]}
+            />
+          )}
+        />
+      </div>
+
+      <div className="filter-group">
+        <span className="filter-label">{labels.pos}</span>
+        <Controller
+          control={control}
+          name="pos"
+          render={({ field }) => (
+            <Select
+              value={field.value}
+              onChange={field.onChange}
+              style={{ width: '100%' }}
+              options={[{ value: '', label: 'All Types' }, ...posOptions.map(p => ({ value: p, label: p }))]}
+            />
+          )}
+        />
+      </div>
+
+      <div className="filter-group">
+        <span className="filter-label">{labels.limit}</span>
+        <Controller
+          control={control}
+          name="limit"
+          render={({ field }) => (
+            <Segmented
+              value={field.value}
+              onChange={value => field.onChange(Number(value))}
+              options={[15, 20, 30].map(n => ({ value: n, label: `${n} ${labels.limitUnit}` }))}
+            />
+          )}
+        />
+      </div>
+    </>
   )
 }
 
@@ -697,9 +715,7 @@ function FlashcardsView({
   updateWordProgress: (w: string, data: any) => Promise<boolean>
 }) {
   const [isPlaying, setIsPlaying] = useState(false)
-  const [mode, setMode] = useState<'random' | 'studied'>('random')
-  const [posFilter, setPosFilter] = useState('')
-  const [limit, setLimit] = useState(15)
+  const { form: setupForm, mode, posFilter, limit } = useDeckSetup()
 
   const [deck, setDeck] = useState<WordItem[]>([])
   const [cardIndex, setCardIndex] = useState(-1) // Starts at -1 for the Start card
@@ -722,21 +738,11 @@ function FlashcardsView({
     }
   }, [isPlaying, cardIndex, activeCard, speakWord])
 
-  // Reset posFilter if changing mode leaves us with an invalid category
-  const handleModeChange = (newMode: 'random' | 'studied') => {
-    setMode(newMode)
-    if (newMode === 'studied' && stats?.studied_pos) {
-      if (posFilter !== "" && !stats.studied_pos.includes(posFilter)) {
-        setPosFilter("")
-      }
-    }
-  }
-
   const startFlashcards = async () => {
     setIsLoading(true)
     setErrorMsg('')
     try {
-      const url = `/api/vocabulary/practice?mode=${mode}&pos=${posFilter}&limit=${limit}`
+      const url = `/api/vocabulary/practice?mode=${mode}&pos=${encodeURIComponent(posFilter)}&limit=${limit}`
       const res = await fetch(url)
       if (res.ok) {
         const data = await res.json()
@@ -776,14 +782,6 @@ function FlashcardsView({
     }
   }
 
-  // Determine dynamic list of POS choices
-  const availablePosList = useMemo(() => {
-    if (mode === 'studied') {
-      return stats?.studied_pos || []
-    }
-    return stats?.unique_pos || []
-  }, [mode, stats])
-
   if (isPlaying && cardIndex >= deck.length) {
     return (
       <div className="victory-box">
@@ -792,17 +790,12 @@ function FlashcardsView({
         <p>You reviewed all {deck.length} words. They have been added to your Studied Words pool.</p>
 
         <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
-          <button type="button" className="start-deck-btn" onClick={startFlashcards}>
+          <Button type="primary" size="large" onClick={startFlashcards} loading={isLoading}>
             Study Again
-          </button>
-          <button
-            type="button"
-            className="spelling-btn"
-            style={{ padding: '12px 28px' }}
-            onClick={() => setIsPlaying(false)}
-          >
+          </Button>
+          <Button size="large" onClick={() => setIsPlaying(false)}>
             Setup Deck
-          </button>
+          </Button>
         </div>
       </div>
     )
@@ -817,90 +810,36 @@ function FlashcardsView({
           <p>Review academic words with flat description sheets. All words studied will go into your Studied Words pool.</p>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', textAlign: 'left' }}>
-            <div className="filter-group">
-              <span className="filter-label">Practice Focus:</span>
-              <div className="filter-tags">
-                <button
-                  type="button"
-                  className={`filter-tag ${mode === 'random' ? 'active' : ''}`}
-                  onClick={() => handleModeChange('random')}
-                >
-                  All Words
-                </button>
-                <button
-                  type="button"
-                  className={`filter-tag ${mode === 'studied' ? 'active' : ''}`}
-                  onClick={() => handleModeChange('studied')}
-                  disabled={!stats || !stats.studied_count}
-                  style={{ opacity: !stats || !stats.studied_count ? 0.5 : 1 }}
-                >
-                  Studied Words ({stats?.studied_count || 0})
-                </button>
-              </div>
-            </div>
-
-            <div className="filter-group">
-              <span className="filter-label">Filter by Word Type:</span>
-              <select
-                className="spelling-input"
-                style={{ fontSize: '0.95rem', padding: '10px', height: 'auto', width: '100%', maxWidth: 'none' }}
-                value={posFilter}
-                onChange={e => setPosFilter(e.target.value)}
-              >
-                <option value="">All Types</option>
-                {availablePosList.map((pos: string) => (
-                  <option key={pos} value={pos}>{pos}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="filter-group">
-              <span className="filter-label">Deck Size:</span>
-              <div className="filter-tags">
-                {[15, 20, 30].map(n => (
-                  <button
-                    type="button"
-                    key={n}
-                    className={`filter-tag ${limit === n ? 'active' : ''}`}
-                    onClick={() => setLimit(n)}
-                  >
-                    {n} Cards
-                  </button>
-                ))}
-              </div>
-            </div>
+            <DeckSetupFields
+              form={setupForm}
+              stats={stats}
+              labels={{ mode: 'Practice Focus:', studied: 'Studied Words', pos: 'Filter by Word Type:', limit: 'Deck Size:', limitUnit: 'Cards' }}
+            />
           </div>
 
-          {errorMsg && <div style={{ color: 'var(--status-wrong)', fontSize: '0.9rem' }}>⚠️ {errorMsg}</div>}
+          {errorMsg && <Alert type="error" showIcon message={errorMsg} style={{ width: '100%' }} />}
 
-          <button
-            type="button"
-            className="start-deck-btn"
-            disabled={isLoading}
-            onClick={startFlashcards}
-            style={{ width: '100%' }}
-          >
+          <Button type="primary" size="large" block loading={isLoading} onClick={startFlashcards}>
             {isLoading ? 'Building deck...' : 'Start Review'}
-          </button>
+          </Button>
         </div>
       ) : (
         <div className="flashcard-game-container">
           <div className="game-top-bar">
-            <button type="button" className="game-quit-btn" onClick={() => setIsPlaying(false)}>
+            <Button danger onClick={() => setIsPlaying(false)}>
               Quit Session
-            </button>
+            </Button>
             <div className="flashcard-deck-info">
               <span>{cardIndex === -1 ? 'Ready' : `Card ${cardIndex + 1} of ${deck.length}`}</span>
             </div>
           </div>
 
           {/* Progress bar */}
-          <div className="flashcard-progress-bar-bg">
-            <div
-              className="flashcard-progress-bar-fill"
-              style={{ width: `${cardIndex === -1 ? 0 : ((cardIndex + 1) / deck.length) * 100}%` }}
-            ></div>
-          </div>
+          <Progress
+            percent={cardIndex === -1 ? 0 : Math.round(((cardIndex + 1) / deck.length) * 100)}
+            showInfo={false}
+            strokeColor="var(--ielts-red)"
+          />
 
           {/* Flat Flashcard containing full details */}
           {cardIndex === -1 ? (
@@ -918,19 +857,19 @@ function FlashcardsView({
                   <span className={`word-pos-badge ${activeCard.POS.toLowerCase().replace('.', '')}`}>
                     {activeCard.POS}
                   </span>
-                  <button
-                    type="button"
+                  <Button
+                    type="text"
+                    shape="circle"
                     className="action-btn"
                     title="Listen pronunciation"
+                    icon={<VolumeUpRounded />}
                     onClick={() => {
                       setIsSpeaking(true)
                       speakWord(activeCard.vocab, () => {
                         setIsSpeaking(false)
                       })
                     }}
-                  >
-                    🔊
-                  </button>
+                  />
                 </div>
                 
                 <div className="card-face-mid" style={{ gap: '10px' }}>
@@ -946,15 +885,15 @@ function FlashcardsView({
 
           {/* Single Next Card action button */}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <button
-              type="button"
-              className="start-deck-btn"
+            <Button
+              type="primary"
+              size="large"
+              block
               onClick={handleNextCard}
               disabled={isSpeaking && cardIndex >= 0}
-              style={{ width: '100%', padding: '14px', opacity: (isSpeaking && cardIndex >= 0) ? 0.6 : 1 }}
             >
               {cardIndex === -1 ? 'Start Deck ➔' : (cardIndex === deck.length - 1 ? 'Finish Deck ➔' : 'Next Card ➔')}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -976,30 +915,18 @@ function PracticeView({
 }) {
   const [activeGame, setActiveGame] = useState<'translation' | 'spelling' | 'matching' | null>(null)
   
-  // Game Setup variables
-  const [mode, setMode] = useState<'random' | 'studied'>('random')
-  const [posFilter, setPosFilter] = useState('')
-  const [limit, setLimit] = useState(15)
+  // Game Setup variables (react-hook-form)
+  const { form: setupForm, mode, posFilter, limit } = useDeckSetup()
 
   const [deck, setDeck] = useState<WordItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
-  // Reset posFilter if changing mode leaves us with an invalid category
-  const handleModeChange = (newMode: 'random' | 'studied') => {
-    setMode(newMode)
-    if (newMode === 'studied' && stats?.studied_pos) {
-      if (posFilter !== "" && !stats.studied_pos.includes(posFilter)) {
-        setPosFilter("")
-      }
-    }
-  }
-
   const fetchPracticeDeck = async (count: number = limit) => {
     setIsLoading(true)
     setErrorMsg('')
     try {
-      const url = `/api/vocabulary/practice?mode=${mode}&pos=${posFilter}&limit=${count}`
+      const url = `/api/vocabulary/practice?mode=${mode}&pos=${encodeURIComponent(posFilter)}&limit=${count}`
       const res = await fetch(url)
       if (res.ok) {
         const data = await res.json()
@@ -1028,14 +955,6 @@ function PracticeView({
     }
   }
 
-  // Determine dynamic list of POS choices
-  const availablePosList = useMemo(() => {
-    if (mode === 'studied') {
-      return stats?.studied_pos || []
-    }
-    return stats?.unique_pos || []
-  }, [mode, stats])
-
   return (
     <div className="practice-view-container">
       {!activeGame ? (
@@ -1047,60 +966,13 @@ function PracticeView({
             </h3>
             
             <div className="practice-selector" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
-              <div className="filter-group">
-                <span className="filter-label">Vocabulary Scope:</span>
-                <div className="filter-tags">
-                  <button
-                    type="button"
-                    className={`filter-tag ${mode === 'random' ? 'active' : ''}`}
-                    onClick={() => handleModeChange('random')}
-                  >
-                    All Words
-                  </button>
-                  <button
-                    type="button"
-                    className={`filter-tag ${mode === 'studied' ? 'active' : ''}`}
-                    onClick={() => handleModeChange('studied')}
-                    disabled={!stats || !stats.studied_count}
-                    style={{ opacity: !stats || !stats.studied_count ? 0.5 : 1 }}
-                  >
-                    Studied ({stats?.studied_count || 0})
-                  </button>
-                </div>
-              </div>
-
-              <div className="filter-group">
-                <span className="filter-label">Word Type filter:</span>
-                <select
-                  className="spelling-input"
-                  style={{ fontSize: '0.88rem', padding: '8px', height: 'auto', width: '100%', maxWidth: 'none' }}
-                  value={posFilter}
-                  onChange={e => setPosFilter(e.target.value)}
-                >
-                  <option value="">All Types</option>
-                  {availablePosList.map((pos: string) => (
-                    <option key={pos} value={pos}>{pos}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="filter-group">
-                <span className="filter-label">Session length:</span>
-                <div className="filter-tags">
-                  {[15, 20, 30].map(n => (
-                    <button
-                      type="button"
-                      key={n}
-                      className={`filter-tag ${limit === n ? 'active' : ''}`}
-                      onClick={() => setLimit(n)}
-                    >
-                      {n} Qs
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <DeckSetupFields
+                form={setupForm}
+                stats={stats}
+                labels={{ mode: 'Vocabulary Scope:', studied: 'Studied', pos: 'Word Type filter:', limit: 'Session length:', limitUnit: 'Qs' }}
+              />
             </div>
-            {errorMsg && <div style={{ color: 'var(--status-wrong)', fontSize: '0.88rem', marginTop: '6px' }}>⚠️ {errorMsg}</div>}
+            {errorMsg && <Alert type="error" showIcon message={errorMsg} style={{ marginTop: 6 }} />}
           </div>
 
           {/* Game selection cards */}
@@ -1109,27 +981,27 @@ function PracticeView({
               <span className="practice-icon">📝</span>
               <h4 className="practice-title">Translation Quiz</h4>
               <p className="practice-desc">Given a random English or Vietnamese word, write the corresponding translation. Automatically matches synonyms.</p>
-              <button type="button" className="practice-play-btn" disabled={isLoading}>
+              <Button type="primary" block loading={isLoading}>
                 {isLoading ? 'Loading...' : 'Play Game'}
-              </button>
+              </Button>
             </div>
 
             <div className="practice-card" onClick={() => handleStartGame('spelling')}>
               <span className="practice-icon">🔊</span>
               <h4 className="practice-title">Spelling Bee</h4>
               <p className="practice-desc">Listen to pronunciation audio and write the correct English spelling. Focused purely on audio-based recognition.</p>
-              <button type="button" className="practice-play-btn" disabled={isLoading}>
+              <Button type="primary" block loading={isLoading}>
                 {isLoading ? 'Loading...' : 'Play Game'}
-              </button>
+              </Button>
             </div>
 
             <div className="practice-card" onClick={() => handleStartGame('matching')}>
               <span className="practice-icon">⚡</span>
               <h4 className="practice-title">Match Pairs</h4>
               <p className="practice-desc">Connect English words with their definitions in a 6x2 grid as fast as you can. Trains swift recognition.</p>
-              <button type="button" className="practice-play-btn" disabled={isLoading}>
+              <Button type="primary" block loading={isLoading}>
                 {isLoading ? 'Loading...' : 'Play Game'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -1176,7 +1048,9 @@ function TranslationGame({
   updateWordProgress: (w: string, data: any) => Promise<boolean>
 }) {
   const [index, setIndex] = useState(0)
-  const [typedWord, setTypedWord] = useState('')
+  // The typed answer is a react-hook-form field, reset for every question
+  const { control, reset, watch } = useForm<{ answer: string }>({ defaultValues: { answer: '' } })
+  const typedWord = watch('answer') ?? ''
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
   const [correctCount, setCorrectCount] = useState(0)
@@ -1220,7 +1094,7 @@ function TranslationGame({
   }
 
   const handleNext = () => {
-    setTypedWord('')
+    reset({ answer: '' })
     setIsSubmitted(false)
     setHintRevealed(false)
     setIndex(i => i + 1)
@@ -1251,9 +1125,9 @@ function TranslationGame({
           </div>
         </div>
 
-        <button type="button" className="start-deck-btn" onClick={onQuit} style={{ marginTop: '12px' }}>
+        <Button type="primary" size="large" onClick={onQuit} style={{ marginTop: '12px' }}>
           Back to Practice Hub
-        </button>
+        </Button>
       </div>
     )
   }
@@ -1261,18 +1135,16 @@ function TranslationGame({
   return (
     <div className="active-game-wrapper">
       <div className="game-top-bar">
-        <button type="button" className="game-quit-btn" onClick={onQuit}>
+        <Button danger onClick={onQuit}>
           Quit Game
-        </button>
+        </Button>
         <div className="game-stats-hud">
           <span className="hud-correct">Correct: {correctCount}</span>
           <span className="hud-wrong">Wrong: {wrongCount}</span>
         </div>
       </div>
 
-      <div className="flashcard-progress-bar-bg" style={{ height: '6px' }}>
-        <div className="flashcard-progress-bar-fill" style={{ width: `${(index / deck.length) * 100}%` }}></div>
-      </div>
+      <Progress percent={Math.round((index / deck.length) * 100)} showInfo={false} size="small" strokeColor="var(--ielts-red)" />
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 700 }}>
         <span>Question {index + 1} of {deck.length}</span>
       </div>
@@ -1332,21 +1204,25 @@ function TranslationGame({
             </div>
           )}
 
-          <input
-            type="text"
-            className={`spelling-input ${isSubmitted ? (isCorrect ? 'correct' : 'incorrect') : ''}`}
-            placeholder={promptLang === 'en' ? "Type Vietnamese definition..." : "Type English spelling..."}
-            value={typedWord}
-            onChange={(e) => setTypedWord(e.target.value)}
-            disabled={isSubmitted}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleVerify()
-            }}
-            autoFocus
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
+          <Controller
+            control={control}
+            name="answer"
+            render={({ field }) => (
+              <Input
+                {...field}
+                size="large"
+                className={`spelling-input ${isSubmitted ? (isCorrect ? 'correct' : 'incorrect') : ''}`}
+                status={isSubmitted && !isCorrect ? 'error' : undefined}
+                placeholder={promptLang === 'en' ? "Type Vietnamese definition..." : "Type English spelling..."}
+                disabled={isSubmitted}
+                onPressEnter={handleVerify}
+                autoFocus
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+              />
+            )}
           />
 
           {isSubmitted && (
@@ -1367,28 +1243,17 @@ function TranslationGame({
           <div className="spelling-actions">
             {!isSubmitted ? (
               <>
-                <button
-                  type="button"
-                  className="spelling-btn"
-                  onClick={() => setHintRevealed(true)}
-                  disabled={hintRevealed}
-                  style={{ opacity: hintRevealed ? 0.5 : 1 }}
-                >
+                <Button size="large" onClick={() => setHintRevealed(true)} disabled={hintRevealed}>
                   💡 Show Clue
-                </button>
-                <button
-                  type="button"
-                  className="spelling-btn submit"
-                  onClick={handleVerify}
-                  disabled={!typedWord.trim()}
-                >
+                </Button>
+                <Button type="primary" size="large" onClick={handleVerify} disabled={!typedWord.trim()}>
                   Submit Answer
-                </button>
+                </Button>
               </>
             ) : (
-              <button type="button" className="start-deck-btn" onClick={handleNext}>
+              <Button type="primary" size="large" onClick={handleNext} autoFocus>
                 Continue Next ➔
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -1412,7 +1277,9 @@ function SpellingGame({
   updateWordProgress: (w: string, data: any) => Promise<boolean>
 }) {
   const [index, setIndex] = useState(0)
-  const [typedWord, setTypedWord] = useState('')
+  // The typed answer is a react-hook-form field, reset for every question
+  const { control, reset, watch } = useForm<{ answer: string }>({ defaultValues: { answer: '' } })
+  const typedWord = watch('answer') ?? ''
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [isCorrect, setIsCorrect] = useState(false)
   const [correctCount, setCorrectCount] = useState(0)
@@ -1454,7 +1321,7 @@ function SpellingGame({
   }
 
   const handleNext = () => {
-    setTypedWord('')
+    reset({ answer: '' })
     setIsSubmitted(false)
     setHintRevealed(false)
     setIndex(i => i + 1)
@@ -1490,9 +1357,9 @@ function SpellingGame({
           </div>
         </div>
 
-        <button type="button" className="start-deck-btn" onClick={onQuit} style={{ marginTop: '12px' }}>
+        <Button type="primary" size="large" onClick={onQuit} style={{ marginTop: '12px' }}>
           Back to Practice Hub
-        </button>
+        </Button>
       </div>
     )
   }
@@ -1500,18 +1367,16 @@ function SpellingGame({
   return (
     <div className="active-game-wrapper">
       <div className="game-top-bar">
-        <button type="button" className="game-quit-btn" onClick={onQuit}>
+        <Button danger onClick={onQuit}>
           Quit Game
-        </button>
+        </Button>
         <div className="game-stats-hud">
           <span className="hud-correct">Correct: {correctCount}</span>
           <span className="hud-wrong">Wrong: {wrongCount}</span>
         </div>
       </div>
 
-      <div className="flashcard-progress-bar-bg" style={{ height: '6px' }}>
-        <div className="flashcard-progress-bar-fill" style={{ width: `${(index / deck.length) * 100}%` }}></div>
-      </div>
+      <Progress percent={Math.round((index / deck.length) * 100)} showInfo={false} size="small" strokeColor="var(--ielts-red)" />
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 700 }}>
         <span>Question {index + 1} of {deck.length}</span>
       </div>
@@ -1523,14 +1388,9 @@ function SpellingGame({
           </span>
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', margin: '14px 0' }}>
-            <button
-              type="button"
-              className="pagination-btn"
-              onClick={() => speakWord(activeWord.vocab)}
-              style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '1.1rem' }}
-            >
-              🔊 Play Word Pronunciation
-            </button>
+            <Button size="large" icon={<VolumeUpRounded />} onClick={() => speakWord(activeWord.vocab)}>
+              Play Word Pronunciation
+            </Button>
             <span className={`word-pos-badge ${activeWord.POS.toLowerCase().replace('.', '')}`}>
               {activeWord.POS}
             </span>
@@ -1560,21 +1420,25 @@ function SpellingGame({
             </div>
           )}
 
-          <input
-            type="text"
-            className={`spelling-input ${isSubmitted ? (isCorrect ? 'correct' : 'incorrect') : ''}`}
-            placeholder="Type spelling here..."
-            value={typedWord}
-            onChange={(e) => setTypedWord(e.target.value)}
-            disabled={isSubmitted}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleVerify()
-            }}
-            autoFocus
-            autoComplete="off"
-            autoCorrect="off"
-            autoCapitalize="off"
-            spellCheck={false}
+          <Controller
+            control={control}
+            name="answer"
+            render={({ field }) => (
+              <Input
+                {...field}
+                size="large"
+                className={`spelling-input ${isSubmitted ? (isCorrect ? 'correct' : 'incorrect') : ''}`}
+                status={isSubmitted && !isCorrect ? 'error' : undefined}
+                placeholder="Type spelling here..."
+                disabled={isSubmitted}
+                onPressEnter={handleVerify}
+                autoFocus
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+              />
+            )}
           />
 
           {isSubmitted && (
@@ -1594,28 +1458,17 @@ function SpellingGame({
           <div className="spelling-actions">
             {!isSubmitted ? (
               <>
-                <button
-                  type="button"
-                  className="spelling-btn"
-                  onClick={handleRevealHint}
-                  disabled={hintRevealed}
-                  style={{ opacity: hintRevealed ? 0.5 : 1 }}
-                >
+                <Button size="large" onClick={handleRevealHint} disabled={hintRevealed}>
                   💡 Show Clue / Meaning
-                </button>
-                <button
-                  type="button"
-                  className="spelling-btn submit"
-                  onClick={handleVerify}
-                  disabled={!typedWord.trim()}
-                >
+                </Button>
+                <Button type="primary" size="large" onClick={handleVerify} disabled={!typedWord.trim()}>
                   Submit spelling
-                </button>
+                </Button>
               </>
             ) : (
-              <button type="button" className="start-deck-btn" onClick={handleNext}>
+              <Button type="primary" size="large" onClick={handleNext} autoFocus>
                 Continue Next ➔
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -1772,12 +1625,12 @@ function MatchingGame({
         </div>
 
         <div style={{ display: 'flex', gap: '12px', marginTop: '12px' }}>
-          <button type="button" className="start-deck-btn" onClick={restartMatchGame}>
+          <Button type="primary" size="large" onClick={restartMatchGame}>
             Play Again
-          </button>
-          <button type="button" className="spelling-btn" style={{ padding: '12px 28px' }} onClick={onQuit}>
+          </Button>
+          <Button size="large" onClick={onQuit}>
             Back to Hub
-          </button>
+          </Button>
         </div>
       </div>
     )
@@ -1786,12 +1639,12 @@ function MatchingGame({
   return (
     <div className="active-game-wrapper" style={{ maxWidth: '540px' }}>
       <div className="game-top-bar">
-        <button type="button" className="game-quit-btn" onClick={onQuit}>
+        <Button danger onClick={onQuit}>
           Quit Game
-        </button>
-        <div className="match-timer-hud">
+        </Button>
+        <Tag color="red" style={{ fontSize: '1rem', fontWeight: 800, padding: '4px 12px' }}>
           ⏱️ Timer: {time}s
-        </div>
+        </Tag>
       </div>
 
       <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '6px' }}>

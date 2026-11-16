@@ -1,0 +1,24 @@
+.ets-options-group.ant-radio-group {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  width: 100%;
+}
+
+.ets-options-group .ets-option-label.ant-radio-button-wrapper {
+  flex: 1;
+  text-align: center;
+  font-weight: 600;
+  font-size: 0.85rem;
+  border-radius: 6px;
+  border-inline-start-width: 1px;
+}
+
+.ets-options-group .ets-option-label.ant-radio-button-wrapper::before {
+  display: none;
+}
+
+/* Keep feedback colours readable when the group is disabled after submit */
+.ets-options-group .ets-option-label.ant-radio-button-wrapper-disabled {
+  opacity: 1;
+}

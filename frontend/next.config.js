@@ -10,6 +10,8 @@ const nextConfig = {
       },
     ]
   },
+  // The API is a separate service (../backend). The browser always calls same-origin
+  // /api/*, which is proxied here, so no CORS is needed. Evaluated at build time.
   async rewrites() {
     return [
       {

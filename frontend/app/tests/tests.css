@@ -718,3 +718,46 @@
 :root[data-theme="dark"] .modal-skill-card:hover {
   border-color: rgba(255, 255, 255, 0.14);
 }
+
+/* -------- Ant Design overrides -------- */
+.tests-filter-panel .filter-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tests-filter-panel .ant-form-item-label > label {
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-secondary);
+}
+
+.tests-skeleton-card.ant-skeleton,
+.tests-skeleton-card .ant-skeleton-node {
+  width: 100% !important;
+  height: 140px !important;
+  border-radius: var(--radius-lg);
+}
+
+.subpage-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.skill-select-modal .modal-title {
+  margin: 0;
+}
+
+.skill-select-modal .modal-subtitle {
+  margin: 4px 0 0;
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.exam-card__btn.ant-btn {
+  padding-block: 0;
+}

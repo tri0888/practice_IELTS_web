@@ -47,36 +47,45 @@
   font-weight: 900;
 }
 
-.header-user-chip {
-  display: flex;
+.ielts-header__nav .header-icon-link {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding-left: 14px;
-  border-left: 1px solid rgba(255, 255, 255, 0.16);
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 0.85rem;
-  max-width: 280px;
+  gap: 6px;
 }
 
-.header-user-chip span {
+.ielts-header .theme-toggle.ant-btn,
+.ielts-header .header-user-chip.ant-btn {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.ielts-header .theme-toggle.ant-btn:hover,
+.ielts-header .header-user-chip.ant-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.header-user-chip.ant-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 14px;
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  max-width: 280px;
+  height: 36px;
+  font-size: 0.85rem;
+}
+
+.header-user-chip span:not(.ant-avatar) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.header-user-chip button {
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  color: white;
-  cursor: pointer;
-  font: inherit;
-  font-weight: 700;
-  padding: 7px 10px;
-}
-
-.header-user-chip button:hover {
-  background: rgba(255, 255, 255, 0.16);
+.header-user-avatar.ant-avatar {
+  background: var(--ielts-red);
+  font-weight: 800;
+  flex-shrink: 0;
 }
 
 /* Sidebar & Dashboard Layout Rules */
@@ -116,92 +125,15 @@
   letter-spacing: -0.02em;
 }
 
-.sidebar-menu {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.sidebar-menu-btn {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 18px;
-  background: none;
-  border: none;
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-  font-weight: 600;
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  width: 100%;
-}
-
-.sidebar-menu-btn:hover {
-  background: var(--bg-light, #f8fafc);
-  color: var(--text-primary);
-  transform: translateX(2px);
-}
-
-.sidebar-menu-btn.active {
-  background: var(--bg-light, #f1f5f9);
-  color: var(--ielts-red);
-  box-shadow: inset 4px 0 0 var(--ielts-red);
-}
-
-.sidebar-submenu-container {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.submenu-arrow {
-  font-size: 0.65rem;
-  transition: transform 0.2s ease;
-  color: var(--text-muted);
-}
-
-.submenu-arrow.expanded {
-  transform: rotate(180deg);
-}
-
-.sidebar-submenu {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding-left: 24px;
-  margin-top: 4px;
-}
-
-.submenu-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-size: 0.88rem;
-  font-weight: 500;
-  transition: all 0.15s ease;
-}
-
-.submenu-item:hover {
-  background: var(--bg-light, #f8fafc);
-  color: var(--text-primary);
-  padding-left: 18px;
-}
-
-.submenu-item.active {
-  background: var(--bg-light, #f1f5f9);
-  color: var(--ielts-red);
+.sidebar-menu.ant-menu {
+  background: transparent;
+  border-inline-end: none !important;
   font-weight: 600;
 }
 
-/* If active submenu is ETS TOEIC, use green */
-.submenu-item--toeic.active {
-  color: var(--status-correct, #22c55e) !important;
+.sidebar-menu.ant-menu a {
+  color: inherit;
+  text-decoration: none;
 }
 
 .homepage-main-content {
@@ -227,24 +159,9 @@
     padding: 20px;
     gap: 16px;
   }
-  .sidebar-menu {
-    flex-direction: row;
-    justify-content: space-around;
+  .sidebar-menu.ant-menu {
+    display: flex;
     flex-wrap: wrap;
-  }
-  .sidebar-menu-btn {
-    width: auto;
-    padding: 10px 14px;
-  }
-  .sidebar-submenu {
-    position: absolute;
-    background: var(--bg-card);
-    box-shadow: var(--shadow-md);
-    border: 1px solid var(--border-light);
-    border-radius: var(--radius-md);
-    padding: 8px;
-    z-index: 10;
-    margin-top: 42px;
   }
   .homepage-main-content {
     padding: 24px;

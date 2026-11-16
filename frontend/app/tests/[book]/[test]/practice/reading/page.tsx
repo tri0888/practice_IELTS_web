@@ -3,6 +3,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { Controller } from 'react-hook-form'
+import { Button, Input, Result, Spin, Tabs, Tag } from 'antd'
+import TimerOutlined from '@mui/icons-material/TimerOutlined'
+import { useAnswerForm } from '@/lib/useAnswerForm'
 import PDFViewer from '@/components/PDFViewer/PDFViewer'
 import ResultModal from '@/components/ResultModal/ResultModal'
 import './page.css'
@@ -102,7 +106,7 @@ export default function ReadingPracticePage() {
   const [content, setContent] = useState<ContentData | null>(null)
   const [loading, setLoading] = useState(true)
   const [activePassage, setActivePassage] = useState(0)
-  const [answers, setAnswers] = useState<Record<number, string>>({})
+  const { control, answers, answerField, resetAnswers } = useAnswerForm()
   const [timeLeft, setTimeLeft] = useState(DURATION_SECONDS)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [result, setResult] = useState<any>(null)
@@ -134,7 +138,7 @@ export default function ReadingPracticePage() {
           setContent(defaultContent)
           const init: Record<number, string> = {}
           for (let i = 1; i <= 40; i++) init[i] = ''
-          setAnswers(init)
+          resetAnswers(init)
         }
         // Load practice layout
         try {
@@ -163,7 +167,7 @@ export default function ReadingPracticePage() {
     }
     load()
     return () => { cancelled = true }
-  }, [book, test])
+  }, [book, test, resetAnswers])
 
   // Timer
   useEffect(() => {
@@ -345,7 +349,7 @@ export default function ReadingPracticePage() {
   if (loading) {
     return (
       <div className="container fade-in" style={{ textAlign: 'center', paddingTop: 60 }}>
-        <div style={{ fontSize: '2rem', marginBottom: 16 }}>📖</div>
+        <Spin size="large" style={{ marginBottom: 16 }} />
         <div style={{ fontSize: '1.1rem', fontWeight: 600 }}>Loading Reading Test...</div>
         <div style={{ color: 'var(--text-muted)', marginTop: 8 }}>Preparing reading passages and questions...</div>
       </div>
@@ -355,12 +359,11 @@ export default function ReadingPracticePage() {
   if (!content) {
     return (
       <div className="container">
-        <div className="card" style={{ textAlign: 'center', padding: 40 }}>
-          <p>❌ Unable to load test content.</p>
-          <Link href={`/tests/${book}/${test}`}>
-            <button className="btn btn-primary" style={{ marginTop: 16 }}>Back</button>
-          </Link>
-        </div>
+        <Result
+          status="error"
+          title="Unable to load test content."
+          extra={<Link href={`/tests/${book}/${test}`}><Button type="primary">Back</Button></Link>}
+        />
       </div>
     )
   }
@@ -376,38 +379,33 @@ export default function ReadingPracticePage() {
         <div className="exam-bar__info">
           <span className="exam-bar__badge">Reading</span>
           <span>Cambridge IELTS {book} — Test {test}</span>
-          <span className="reading-answered-badge">
+          <Tag color="blue" style={{ marginLeft: 8 }}>
             {answeredCount}/40 answered
-          </span>
+          </Tag>
         </div>
         <div className="reading-timer-wrapper">
           <div className={timerClass}>
-            ⏱️ {formatTime(timeLeft)}
+            <TimerOutlined fontSize="small" /> {formatTime(timeLeft)}
           </div>
           {!isSubmitted && (
-            <button className="btn btn-submit btn-sm" onClick={handleSubmit}>
+            <Button type="primary" className="btn-submit" onClick={handleSubmit}>
               Submit
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
       {/* Passage Tabs */}
       <div className="reading-tabs-container">
-        <div className="section-tabs" style={{ marginBottom: 0 }}>
-          {passages.map((passage, idx) => (
-            <button
-              key={passage.passage_number}
-              className={`section-tab ${activePassage === idx ? 'section-tab--active' : ''}`}
-              onClick={() => {
-                setActivePassage(idx)
-                setActiveGroupIndex(0)
-              }}
-            >
-              Passage {passage.passage_number}
-            </button>
-          ))}
-        </div>
+        <Tabs
+          className="reading-passage-tabs"
+          activeKey={String(activePassage)}
+          onChange={key => {
+            setActivePassage(Number(key))
+            setActiveGroupIndex(0)
+          }}
+          items={passages.map((passage, idx) => ({ key: String(idx), label: `Passage ${passage.passage_number}` }))}
+        />
         {/* Mini question palette */}
         <div className="reading-palette-mini">
           {Array.from({ length: 40 }, (_, i) => i + 1).map(q => {
@@ -471,17 +469,13 @@ export default function ReadingPracticePage() {
         <div className="split-view-3__panel reading-middle-panel">
           <div className="reading-middle-wrapper">
             {/* Group Tabs */}
-            <div className="section-tabs" style={{ marginBottom: 16, flexShrink: 0 }}>
-              {groups.map((group, idx) => (
-                <button
-                  key={group.range}
-                  className={`section-tab ${activeGroupIndex === idx ? 'section-tab--active' : ''}`}
-                  onClick={() => setActiveGroupIndex(idx)}
-                >
-                  {group.range === 'all' ? 'All' : `Qs ${group.range}`}
-                </button>
-              ))}
-            </div>
+            <Tabs
+              size="small"
+              style={{ marginBottom: 8, flexShrink: 0 }}
+              activeKey={String(activeGroupIndex)}
+              onChange={key => setActiveGroupIndex(Number(key))}
+              items={groups.map((group, idx) => ({ key: String(idx), label: group.range === 'all' ? 'All' : `Qs ${group.range}` }))}
+            />
 
             {/* Questions PDF page */}
             <PDFViewer book={book} test={parseInt(test, 10)} pages={[activeQuestionPage]} style={{ padding: 0, background: 'transparent', flexGrow: 1 }} />
@@ -507,20 +501,26 @@ export default function ReadingPracticePage() {
                   return (
                     <div key={q} className="reading-q-row">
                       <span className="question-block__number">{q}</span>
-                      <input
-                        type="text"
-                        className="input-answer"
-                        value={answers[q] ?? ''}
-                        onChange={e => setAnswers(prev => ({ ...prev, [q]: e.target.value }))}
-                        placeholder="Your answer"
-                        disabled={isSubmitted}
-                        style={{
-                          flex: 1,
-                          ...(isSubmitted && ak ? {
-                            borderColor: isCorrect ? 'var(--status-correct)' : 'var(--status-wrong)',
-                            background: isCorrect ? '#f0fdf4' : '#fef2f2',
-                          } : {})
-                        }}
+                      <Controller
+                        control={control}
+                        name={answerField(q)}
+                        render={({ field }) => (
+                          <Input
+                            {...field}
+                            value={field.value ?? ''}
+                            className="input-answer"
+                            placeholder="Your answer"
+                            disabled={isSubmitted}
+                            status={isSubmitted && ak && !isCorrect ? 'error' : undefined}
+                            style={{
+                              flex: 1,
+                              ...(isSubmitted && ak ? {
+                                borderColor: isCorrect ? 'var(--status-correct)' : 'var(--status-wrong)',
+                                background: isCorrect ? 'rgba(34, 197, 94, 0.08)' : 'rgba(220, 38, 38, 0.08)',
+                              } : {})
+                            }}
+                          />
+                        )}
                       />
                       {isSubmitted && ak && (
                         <div className="reading-q-feedback" style={{ color: isCorrect ? 'var(--status-correct)' : 'var(--status-wrong)' }}>
