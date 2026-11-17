@@ -1,4 +1,4 @@
-import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
+import { createServer, type IncomingHttpHeaders, type IncomingMessage, type ServerResponse } from 'node:http'
 import { guards } from './middleware/middleware'
 import { attemptsRoutes } from './routes/attempts.routes'
 import { audioRoutes } from './routes/audio.routes'
@@ -54,41 +54,42 @@ function send(res: ServerResponse, reply: Reply) {
   res.end(typeof reply.body === 'string' ? reply.body : JSON.stringify(reply.body))
 }
 
-export async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+export type DispatchInput = { method: string; url: string; headers: IncomingHttpHeaders; body: string }
+
+export async function dispatch(input: DispatchInput): Promise<Reply> {
+  const method = input.method.toUpperCase()
   try {
-    const url = new URL(req.url ?? '/', 'http://localhost')
+    const url = new URL(input.url, 'http://localhost')
     if (url.pathname !== API_PREFIX && !url.pathname.startsWith(`${API_PREFIX}/`)) {
-      return send(res, json({ detail: 'Not Found' }, 404))
+      console.warn('No route', method, input.url)
+      return json({ detail: 'Not Found' }, 404)
     }
     const path = url.pathname.slice(API_PREFIX.length).replace(/\/+$/, '') || '/'
-    const method = (req.method ?? 'GET').toUpperCase()
 
     for (const route of routes) {
       if (route.method !== method) continue
       const params = matchPath(route.path, path)
       if (!params) continue
 
-      const apiReq: ApiRequest = {
-        method,
-        path,
-        params,
-        query: url.searchParams,
-        headers: req.headers,
-        body: method === 'GET' ? '' : await readBody(req),
-      }
+      const apiReq: ApiRequest = { method, path, params, query: url.searchParams, headers: input.headers, body: input.body }
       if (route.guard) await guards[route.guard](apiReq)
       const result = await route.handler(apiReq)
-      return send(res, result instanceof Reply ? result : json(result ?? null))
+      return result instanceof Reply ? result : json(result ?? null)
     }
-    send(res, json({ detail: 'Not Found' }, 404))
+    console.warn('No route', method, input.url)
+    return json({ detail: 'Not Found' }, 404)
   } catch (err) {
-    if (err instanceof HttpError) return send(res, json({ detail: err.detail }, err.status))
-    console.error(`Unhandled error on ${req.method} ${req.url}:`, err)
-    send(res, json({ detail: 'Internal Server Error' }, 500))
+    if (err instanceof HttpError) return json({ detail: err.detail }, err.status)
+    console.error(`Unhandled error on ${method} ${input.url}:`, err)
+    return json({ detail: 'Internal Server Error' }, 500)
   }
 }
 
-export default handleRequest
+export async function handleRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const method = (req.method ?? 'GET').toUpperCase()
+  const body = method === 'GET' || method === 'HEAD' ? '' : await readBody(req)
+  send(res, await dispatch({ method, url: req.url ?? '/', headers: req.headers, body }))
+}
 
 if (require.main === module) {
   const port = Number(process.env.PORT) || 8000

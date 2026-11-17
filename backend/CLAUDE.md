@@ -12,7 +12,11 @@ Service API viết bằng TypeScript thuần trên Node.js 22.9+, dùng `node:ht
 - `npm run seed:tts`: sinh voice phát âm cho flashcard, chạy **một lần cho mỗi bot**, chỉ ở máy local. Luồng: Edge-TTS (MP3) → ffmpeg (OGG/Opus) → `sendVoice` tới `SEED_CHAT_ID` (id Telegram của bạn, phải `/start` bot trước) → lưu `file_id` vào `flashcard_audio`. Chạy tiếp được nếu bị ngắt giữa chừng. `-- --limit 5` thử vài từ, `-- --delay 1.5` giãn thời gian giữa các lần gửi. Bot chỉ gửi lại `file_id` đã lưu, nên production không cần TTS hay ffmpeg.
 
 ## Cấu trúc
-- `src/server.ts`: server `node:http`. Ghép các mảng routes theo thứ tự ưu tiên, bỏ tiền tố `/api`, tìm route khớp đầu tiên, chạy guard, gọi controller, rồi biến lỗi thành `{detail}`. Chỉ `listen` khi chạy trực tiếp; test và Vercel import `handleRequest`.
+- `src/server.ts`:
+  - Ghép các mảng routes theo thứ tự ưu tiên.
+  - `dispatch({ method, url, headers, body })` là lõi xử lý: bỏ tiền tố `/api`, tìm route khớp đầu tiên, chạy guard, gọi controller, biến lỗi thành `{detail}`, và log `No route` khi không khớp.
+  - `handleRequest(req, res)` là adapter `node:http`, dùng cho local và test.
+  - Chỉ `listen` khi file được chạy trực tiếp.
 - `src/routes/<module>.routes.ts`: mỗi module một file routes, tất cả để chung trong thư mục `src/routes/`. Gồm `auth`, `practice`, `tests`, `attempts` (`/histories`), `audio`, `vocabulary`, `telegram`, và `health` (`/r2/status`, `/`). Mỗi file export một mảng `Route[]`, mỗi phần tử có `{ method, path, guard?, handler }`. Path dùng `:name` cho một đoạn, `:name*` cho cả phần đuôi còn lại (ví dụ `/audio/:file_name*`).
 - `src/middleware/middleware.ts`: guard `auth` (đọc token từ `?token=` hoặc `Authorization: Bearer`) và guard `approved`.
 - `src/modules/<name>/`: mỗi module có đúng 3 file:
@@ -24,7 +28,9 @@ Service API viết bằng TypeScript thuần trên Node.js 22.9+, dùng `node:ht
   - `database.ts`: một MongoClient cho cả process (cache cho serverless), kèm `COLLECTIONS`.
   - `storage.ts`: Cloudflare R2 (presigned redirect, cache PDF slice).
   - `http.ts`: `HttpError`, kiểu `ApiRequest`/`Route`/`Reply`, `json()`/`text()`/`redirect()`, các hàm parse (`intParam`, `intQuery`, `jsonBody`, `requireString`).
-- `api/index.ts` + `vercel.json`: entry khi deploy Vercel (Node runtime, `maxDuration` 60s), re-export `handleRequest`.
+- `api/index.ts` + `vercel.json`: entry khi deploy Vercel (Node runtime, `maxDuration` 60s).
+  - File này export `GET`/`POST`/`PUT`/`DELETE`/`PATCH` theo kiểu Web `Request → Response`, rồi gọi `dispatch`.
+  - **Không đổi về `(req, res)`**: sau rewrite `/(.*)` → `/api`, handler kiểu Node nhận `req.url = "/api"` thay vì URL gốc. Hậu quả là mọi GET trả trang health, còn mọi POST báo Not Found.
 - `scripts/`: các script CLI. `tests/`: vitest.
 
 ## Quy tắc
