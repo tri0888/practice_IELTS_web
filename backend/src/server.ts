@@ -91,6 +91,8 @@ export async function handleRequest(req: IncomingMessage, res: ServerResponse): 
   send(res, await dispatch({ method, url: req.url ?? '/', headers: req.headers, body }))
 }
 
+export default handleRequest
+
 if (require.main === module) {
   const port = Number(process.env.PORT) || 8000
   createServer(handleRequest).listen(port, () => {

@@ -18,7 +18,6 @@ The project has two parts: the Node.js API (`backend/`) and the Next.js UI (`fro
 │   │   │                     #   each: <name>.controllers.ts / .services.ts / .repositories.ts
 │   │   ├── shared/           # database (MongoDB), storage (Cloudflare R2), http helpers
 │   │   └── data/             # Seed data (layouts, answers, audio assets, vocabulary, r2_keys)
-│   ├── api/index.ts          # Vercel entry (vercel.json)
 │   ├── scripts/              # npm run seed / seed:tts / telegram:webhook
 │   └── tests/                # vitest
 │

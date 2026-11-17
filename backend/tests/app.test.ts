@@ -1,8 +1,7 @@
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import * as vercelEntry from '../api/index'
-import { handleRequest } from '../src/server'
+import serverEntry, { handleRequest } from '../src/server'
 
 let server: Server
 let base = ''
@@ -65,35 +64,9 @@ describe('api server', () => {
   })
 })
 
-describe('vercel entry (api/index.ts)', () => {
-  const vercel = (path: string, init?: RequestInit) => {
-    const req = new Request(`https://backend.vercel.app${path}`, init)
-    return req.method === 'POST' ? vercelEntry.POST(req) : vercelEntry.GET(req)
-  }
-
-  it('routes by the original URL', async () => {
-    const health = await vercel('/api')
-    expect(health.status).toBe(200)
-    expect(await health.json()).toMatchObject({ status: 'ok' })
-
-    const tests = await vercel('/api/tests')
-    expect(tests.status).toBe(401)
-    expect(await tests.json()).toEqual({ detail: 'Authentication required' })
-  })
-
-  it('reads the request body and query', async () => {
-    const res = await vercel('/api/auth/login', { method: 'POST', body: 'not json' })
-    expect(res.status).toBe(422)
-    expect(await res.json()).toEqual({ detail: 'body: must be a valid JSON object' })
-
-    const badToken = await vercel('/api/tests?token=garbage')
-    expect(await badToken.json()).toEqual({ detail: 'Invalid authentication token' })
-  })
-
-  it('returns a JSON 404 for unknown routes', async () => {
-    const res = await vercel('/api/nope')
-    expect(res.status).toBe(404)
-    expect(res.headers.get('content-type')).toBe('application/json')
-    expect(await res.json()).toEqual({ detail: 'Not Found' })
+describe('vercel entry (src/server.ts)', () => {
+  it('default-exports the (req, res) handler', () => {
+    expect(serverEntry).toBe(handleRequest)
+    expect(typeof serverEntry).toBe('function')
   })
 })
