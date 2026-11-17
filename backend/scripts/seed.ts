@@ -1,20 +1,7 @@
-/**
- * Database seeder (port of backend/config/seed.py).
- *
- *   npm run seed                         import seed data (upserts, safe to re-run)
- *   npm run seed -- --delete             wipe the seeded collections first, then import
- *   npm run seed -- --delete-only        only wipe
- *   npm run seed -- --claim-histories you@example.com
- *        give attempts created by the old Python backend (no user_id) to that user,
- *        since histories are now private per user.
- *
- * Unlike the Python script, running without flags no longer deletes anything.
- */
 import { randomUUID } from 'node:crypto'
-import { flag, option, requireDb } from './_env'
-import { COLLECTIONS } from '../src/db'
-import { nowIso } from '../src/http'
-import { hashPassword } from '../src/modules/auth/services'
+import { COLLECTIONS, getDb } from '../src/shared/database'
+import { nowIso } from '../src/shared/http'
+import { hashPassword } from '../src/modules/auth/auth.services'
 import ieltsLayouts from '../src/data/ielts_layouts.json'
 import toeicLayouts from '../src/data/toeic_layouts.json'
 import ieltsAnswers from '../src/data/ielts_answers.json'
@@ -24,6 +11,21 @@ import toeicAudio from '../src/data/toeic_audio_assets.json'
 import r2Keys from '../src/data/r2_keys.json'
 import users from '../src/data/users.json'
 import vocabulary from '../src/data/vocabulary.json'
+
+const flag = (name: string) => process.argv.includes(`--${name}`)
+const option = (name: string) => {
+  const i = process.argv.indexOf(`--${name}`)
+  return i >= 0 ? process.argv[i + 1] : undefined
+}
+
+async function requireDb() {
+  const db = await getDb()
+  if (!db) {
+    console.error('Error: MongoDB is not available (check MONGODB_URI / DB_PASSWORD / DB_NAME).')
+    process.exit(1)
+  }
+  return db
+}
 
 type Db = Awaited<ReturnType<typeof requireDb>>
 const range = ([a, b]: number[]) => Array.from({ length: b - a + 1 }, (_, i) => a + i)

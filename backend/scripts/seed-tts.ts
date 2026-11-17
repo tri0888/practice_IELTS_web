@@ -1,26 +1,16 @@
-/**
- * Seed Telegram voice-message file_ids for flashcard pronunciation
- * (port of backend/scripts/seed_flashcard_tts.py). Run ONCE PER BOT, locally:
- *
- *   npm run seed:tts                 all words not cached yet (resumable)
- *   npm run seed:tts -- --limit 5    try a few words first
- *   npm run seed:tts -- --delay 1.5  seconds between sends (rate limits)
- *
- * For each word: Edge-TTS (MP3) -> ffmpeg (OGG/Opus, required by sendVoice)
- * -> sendVoice(SEED_CHAT_ID) -> store the returned file_id in `flashcard_audio`.
- * The bot then only re-sends cached file_ids, so production needs neither TTS nor ffmpeg.
- *
- * Env: TELEGRAM_BOT_TOKEN (bot to seed for), SEED_CHAT_ID (your numeric Telegram id;
- * you must have /start-ed the bot), FLASHCARD_TTS_VOICE (optional, default en-GB-SoniaNeural).
- */
 import { spawn } from 'node:child_process'
 import ffmpeg from '@ffmpeg-installer/ffmpeg'
 import { Api, InputFile } from 'grammy'
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts'
-import { option, requireDb } from './_env'
-import { COLLECTIONS } from '../src/db'
-import { getVocab } from '../src/modules/vocabulary/services'
-import { FLASHCARD_TTS_VOICE, saveFlashcardFileId } from '../src/modules/telegram/services'
+import { COLLECTIONS, getDb } from '../src/shared/database'
+import { getVocab } from '../src/modules/vocabulary/vocabulary.services'
+import { FLASHCARD_TTS_VOICE } from '../src/modules/telegram/telegram.services'
+import { saveFlashcardFileId } from '../src/modules/telegram/telegram.repositories'
+
+const option = (name: string) => {
+  const i = process.argv.indexOf(`--${name}`)
+  return i >= 0 ? process.argv[i + 1] : undefined
+}
 
 async function synthMp3(text: string, voice: string): Promise<Buffer> {
   const tts = new MsEdgeTTS()
@@ -35,7 +25,6 @@ async function synthMp3(text: string, voice: string): Promise<Buffer> {
   }
 }
 
-/** MP3 -> OGG/Opus mono 48 kHz, same settings as the Python script. */
 function mp3ToOggOpus(mp3: Buffer): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const proc = spawn(ffmpeg.path, [
@@ -68,7 +57,8 @@ async function main() {
   const voice = FLASHCARD_TTS_VOICE()
   const botId = Number(token.split(':')[0])
 
-  const db = await requireDb()
+  const db = await getDb()
+  if (!db) throw new Error('MongoDB is not available (check MONGODB_URI / DB_PASSWORD / DB_NAME).')
   const coll = db.collection(COLLECTIONS.flashcardAudio)
   await coll.createIndex({ bot_id: 1, vocab: 1, voice: 1 }, { unique: true })
 

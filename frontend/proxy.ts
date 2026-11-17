@@ -5,8 +5,8 @@ import { AUTH_COOKIE, ROLE_COOKIE, resolveRedirect, type GuardSession } from '@/
 /**
  * Next.js 16 Proxy (formerly Middleware): runs before every page render and
  * stops people from reaching pages by typing URLs they should not use.
- * This is a navigation guard only — the FastAPI backend still authorises
- * every /api call on its own.
+ * This is a navigation guard only — the backend still authorises every
+ * /api call on its own.
  *
  * Set JWT_SECRET (same value as the backend) in the frontend environment to
  * verify the token signature; without it the token is only decoded and its

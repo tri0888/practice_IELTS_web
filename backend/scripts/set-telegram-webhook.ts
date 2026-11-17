@@ -1,16 +1,7 @@
-/**
- * Register the bot webhook (the Python backend did this on startup; serverless has no startup hook).
- *
- *   npm run telegram:webhook            set TELEGRAM_WEBHOOK_URL + /api/telegram/webhook
- *   npm run telegram:webhook -- --info  show the current webhook
- *   npm run telegram:webhook -- --delete
- *
- * If TELEGRAM_WEBHOOK_SECRET is set (recommended), Telegram sends it with every
- * update and the API rejects requests without it.
- */
 import { Api } from 'grammy'
-import { flag } from './_env'
-import { telegramWebhookUrl } from '../src/modules/telegram/bot'
+import { telegramWebhookUrl } from '../src/modules/telegram/telegram.services'
+
+const flag = (name: string) => process.argv.includes(`--${name}`)
 
 async function main() {
   const token = (process.env.TELEGRAM_BOT_TOKEN ?? '').trim()

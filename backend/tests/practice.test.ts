@@ -1,7 +1,6 @@
-/** Ported from Python `test_practice_helpers.py`, plus the bundled-layout fallback and PDF slicing. */
 import { describe, expect, it } from 'vitest'
 import { PDFDocument } from 'pdf-lib'
-import { isToeic, resolvePartPages, slicePdf, type Layout } from '../src/modules/practice/services'
+import { isToeic, resolvePartPages, slicePdf, type Layout } from '../src/modules/practice/practice.services'
 
 describe('isToeic', () => {
   it.each([[2026, true], [2000, true], [1999, false], [20, false], [11, false]])('%i -> %s', (book, expected) => {
@@ -25,7 +24,7 @@ describe('resolvePartPages', () => {
     ['listening_all', [1, 2, 3]],
     ['reading_1', [10, 11]],
     ['reading_all', [10, 11, 12]],
-    ['reading_q_1', [10, 11]], // unique + sorted group pages
+    ['reading_q_1', [10, 11]],
     ['writing_1', [20]],
     ['speaking', [30, 31]],
     ['unknown_9', []],
