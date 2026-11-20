@@ -4,6 +4,14 @@ An interactive, premium web application for practicing Cambridge IELTS exams. Th
 
 ---
 
+## 🌐 Live Demo
+
+- Website: https://www.foodfast.me
+- Demo account: `demo@gmail.com` / password `1234`
+- Anyone can also register a new account at `/register` and use the app right away (no approval step).
+
+---
+
 ## 📂 Codebase Structure
 
 The project has two parts: the Node.js API (`backend/`) and the Next.js UI (`frontend/`).
@@ -13,7 +21,7 @@ The project has two parts: the Node.js API (`backend/`) and the Next.js UI (`fro
 │   ├── src/
 │   │   ├── server.ts         # HTTP server: match route, run guard, call controller, errors -> {detail}
 │   │   ├── routes/           # <module>.routes.ts: endpoints of each module (method, path, guard, controller)
-│   │   ├── middleware/       # auth / approved guards
+│   │   ├── middleware/       # auth guard
 │   │   ├── modules/          # auth, tests, practice, attempts, audio, vocabulary, telegram
 │   │   │                     #   each: <name>.controllers.ts / .services.ts / .repositories.ts
 │   │   ├── shared/           # database (MongoDB), storage (Cloudflare R2), http helpers

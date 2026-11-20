@@ -2,7 +2,11 @@
   {
     "email": "tri@gmail.com",
     "name": "Tri",
-    "password": "minhtri123",
-    "role": "approved"
+    "password": "minhtri123"
+  },
+  {
+    "email": "demo@gmail.com",
+    "name": "Demo",
+    "password": "1234"
   }
 ]

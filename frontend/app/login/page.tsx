@@ -23,15 +23,14 @@ export default function LoginPage() {
     defaultValues: { email: '', password: '' },
   })
 
-  const destination = (role: string) => {
-    if (role !== 'approved') return '/pending'
+  const destination = () => {
     const next = new URLSearchParams(window.location.search).get('next')
     return safeNextPath(next) || '/Home'
   }
 
   useEffect(() => {
     if (window.location.search.includes('registered=1')) {
-      setMessage('Registration successful. Please wait for approval before accessing practice tests.')
+      setMessage('Registration successful. Sign in to start practicing.')
     }
   }, [])
 
@@ -53,7 +52,7 @@ export default function LoginPage() {
     } catch {
       /* sessionStorage unavailable: fall through */
     }
-    window.location.replace(destination(user.role))
+    window.location.replace(destination())
   }, [isLoading, user, logout])
 
   const onSubmit = async ({ email, password }: LoginValues) => {

@@ -1,15 +1,13 @@
 /**
  * Pure route rules shared by `proxy.ts` (server, before render) and tests.
  * Goal: users cannot reach pages by hand-editing the address bar unless they
- * are allowed to (auth state, approval state, valid book/test numbers).
+ * are allowed to (auth state, valid book/test numbers).
  */
 export const AUTH_COOKIE = 'practice_hub_token'
-export const ROLE_COOKIE = 'practice_hub_role'
 /** sessionStorage counter used by /login to detect a proxy <-> client redirect loop. */
 export const LOGIN_BOUNCE_KEY = 'practice_hub_login_bounces'
 
 export const PUBLIC_PATHS = ['/login', '/register']
-export const PENDING_PATH = '/pending'
 export const HOME_PATH = '/Home'
 
 const IELTS_BOOKS = { min: 11, max: 19 }
@@ -49,7 +47,7 @@ export function isKnownAppPath(pathname: string): boolean {
   return skill === undefined || IELTS_SKILLS.has(skill)
 }
 
-export type GuardSession = { authenticated: boolean; role: string | null }
+export type GuardSession = { authenticated: boolean }
 
 /** Where to send the user, or null to let the request through. */
 export function resolveRedirect(pathname: string, session: GuardSession): string | null {
@@ -57,13 +55,11 @@ export function resolveRedirect(pathname: string, session: GuardSession): string
 
   if (!session.authenticated) {
     if (isPublic) return null
-    const next = pathname !== PENDING_PATH && isKnownAppPath(pathname) ? `?next=${encodeURIComponent(pathname)}` : ''
+    const next = isKnownAppPath(pathname) ? `?next=${encodeURIComponent(pathname)}` : ''
     return `/login${next}`
   }
 
-  const approved = session.role === 'approved'
-  if (!approved) return pathname === PENDING_PATH ? null : PENDING_PATH
-  if (isPublic || pathname === PENDING_PATH) return HOME_PATH
+  if (isPublic) return HOME_PATH
   if (!isKnownAppPath(pathname)) return pathname.startsWith('/tests/') ? '/tests' : HOME_PATH
   return null
 }

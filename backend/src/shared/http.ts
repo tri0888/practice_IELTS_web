@@ -33,7 +33,7 @@ export const json = (body: unknown, status = 200) => new Reply(status, body, { '
 export const text = (body: string, status = 200) => new Reply(status, body, { 'Content-Type': 'text/plain; charset=utf-8' })
 export const redirect = (location: string) => new Reply(302, undefined, { Location: location })
 
-export type Guard = 'auth' | 'approved'
+export type Guard = 'auth'
 export type Route = {
   method: 'GET' | 'POST' | 'PUT' | 'DELETE'
   path: string

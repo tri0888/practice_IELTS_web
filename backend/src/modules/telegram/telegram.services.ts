@@ -87,7 +87,6 @@ export async function linkTelegramAccount(telegramId: number, emailRaw: string, 
     return { success: false, message: result.reason === 'not_found' ? 'Email không tồn tại trên hệ thống.' : 'Mật khẩu không chính xác.' }
   }
   const { user } = result
-  if (user.role !== 'approved') return { success: false, message: 'Tài khoản của bạn đang chờ phê duyệt, chưa được phép sử dụng.' }
 
   if (!(await repo.saveTelegramLink(telegramId, user.id, email))) {
     return { success: false, message: 'Telegram users collection is not available.' }

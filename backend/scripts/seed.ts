@@ -152,16 +152,16 @@ async function importData(db: Db) {
   await step('Users', async () => {
     const coll = db.collection(COLLECTIONS.users)
     let count = 0
-    for (const u of users as { email?: string; password?: string; name?: string; role?: string }[]) {
+    for (const u of users as { email?: string; password?: string; name?: string }[]) {
       const email = (u.email ?? '').trim().toLowerCase()
       if (!email) continue
       const now = nowIso()
       const password_hash = await hashPassword(u.password ?? '')
       const existing = await coll.findOne({ email })
       if (existing) {
-        await coll.updateOne({ email }, { $set: { name: (u.name ?? '').trim() || existing.name || '', password_hash, role: u.role ?? 'pending', updated_at: now } })
+        await coll.updateOne({ email }, { $set: { name: (u.name ?? '').trim() || existing.name || '', password_hash, updated_at: now } })
       } else {
-        await coll.insertOne({ id: randomUUID(), email, name: (u.name ?? '').trim(), password_hash, role: u.role ?? 'pending', created_at: now, updated_at: now })
+        await coll.insertOne({ id: randomUUID(), email, name: (u.name ?? '').trim(), password_hash, created_at: now, updated_at: now })
       }
       count++
     }

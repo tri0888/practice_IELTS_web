@@ -5,14 +5,14 @@ import { httpError, nowIso } from '../../shared/http'
 import * as repo from './auth.repositories'
 import type { UserDoc } from './auth.repositories'
 
-export type PublicUser = { id: string; email: string; name: string; role: string }
+export type PublicUser = { id: string; email: string; name: string }
 
 const jwtSecret = () => process.env.JWT_SECRET || 'change-this-secret-in-production'
 const TOKEN_EXPIRES_IN = '7d'
 const BCRYPT_ROUNDS = 12
 
 export function publicUser(user: Partial<UserDoc>): PublicUser {
-  return { id: user.id!, email: user.email!, name: user.name!, role: user.role ?? 'pending' }
+  return { id: user.id!, email: user.email!, name: user.name! }
 }
 
 export const hashPassword = (password: string) => bcrypt.hash(password, BCRYPT_ROUNDS)
@@ -25,8 +25,8 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   }
 }
 
-export function signToken(user: Pick<UserDoc, 'id' | 'email' | 'role'>): string {
-  return jwt.sign({ email: user.email, role: user.role ?? 'pending' }, jwtSecret(), {
+export function signToken(user: Pick<UserDoc, 'id' | 'email'>): string {
+  return jwt.sign({ email: user.email }, jwtSecret(), {
     algorithm: 'HS256',
     subject: user.id,
     expiresIn: TOKEN_EXPIRES_IN,
@@ -74,7 +74,6 @@ export async function register(emailRaw: string, password: string, nameRaw: stri
     email,
     name,
     password_hash: await hashPassword(password),
-    role: 'pending',
     created_at: now,
     updated_at: now,
   }

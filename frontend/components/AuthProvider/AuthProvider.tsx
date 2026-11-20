@@ -1,7 +1,7 @@
 "use client"
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { AUTH_COOKIE, ROLE_COOKIE } from '@/lib/routeGuard'
+import { AUTH_COOKIE } from '@/lib/routeGuard'
 
 const TOKEN_KEY = 'practice_hub_token'
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 30
@@ -17,28 +17,24 @@ function writeCookie(name: string, value: string | null) {
 
 function clearAuthCookies() {
   writeCookie(AUTH_COOKIE, null)
-  writeCookie(ROLE_COOKIE, null)
 }
 
-function persistSession(token: string | null, role: string | null) {
+function persistSession(token: string | null) {
   if (token) window.localStorage.setItem(TOKEN_KEY, token)
   else window.localStorage.removeItem(TOKEN_KEY)
   writeCookie(AUTH_COOKIE, token)
-  writeCookie(ROLE_COOKIE, token ? role : null)
 }
 
 export type AuthUser = {
   id: string
   email: string
   name: string
-  role: 'approved' | 'pending' | string
 }
 
 type AuthContextValue = {
   user: AuthUser | null
   isLoading: boolean
   isAuthenticated: boolean
-  isApproved: boolean
   login: (email: string, password: string) => Promise<AuthUser>
   logout: () => void
   refreshUser: () => Promise<void>
@@ -129,12 +125,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) {
-        persistSession(null, null)
+        persistSession(null)
         setUser(null)
         return
       }
       const data = await res.json()
-      persistSession(token, data.user?.role ?? null)
+      persistSession(token)
       setUser(data.user)
     } catch (err) {
       // Backend unreachable: keep the stored token for the next reload, but
@@ -161,13 +157,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!res.ok) {
       throw new Error(data.detail || 'Unable to sign in')
     }
-    persistSession(data.token, data.user?.role ?? null)
+    persistSession(data.token)
     setUser(data.user)
     return data.user as AuthUser
   }, [])
 
   const logout = useCallback(() => {
-    persistSession(null, null)
+    persistSession(null)
     setUser(null)
     window.location.href = '/login'
   }, [])
@@ -176,7 +172,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     isLoading,
     isAuthenticated: !!user,
-    isApproved: user?.role === 'approved',
     login,
     logout,
     refreshUser,

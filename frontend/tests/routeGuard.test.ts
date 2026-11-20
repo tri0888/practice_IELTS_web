@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { isKnownAppPath, resolveRedirect, safeNextPath } from '../lib/routeGuard'
 
-const guest = { authenticated: false, role: null }
-const pending = { authenticated: true, role: 'pending' }
-const approved = { authenticated: true, role: 'approved' }
+const guest = { authenticated: false }
+const member = { authenticated: true }
 
 describe('isKnownAppPath', () => {
   it.each([
@@ -26,17 +25,12 @@ describe('resolveRedirect', () => {
     expect(resolveRedirect('/login', guest)).toBeNull()
   })
 
-  it('keeps pending users on /pending', () => {
-    expect(resolveRedirect('/Home', pending)).toBe('/pending')
-    expect(resolveRedirect('/pending', pending)).toBeNull()
-  })
-
-  it('keeps approved users away from auth pages and bogus URLs', () => {
-    expect(resolveRedirect('/login', approved)).toBe('/Home')
-    expect(resolveRedirect('/pending', approved)).toBe('/Home')
-    expect(resolveRedirect('/tests/42/7/practice', approved)).toBe('/tests')
-    expect(resolveRedirect('/whatever', approved)).toBe('/Home')
-    expect(resolveRedirect('/tests/12/3/practice/listening', approved)).toBeNull()
+  it('keeps signed-in users away from auth pages and bogus URLs', () => {
+    expect(resolveRedirect('/login', member)).toBe('/Home')
+    expect(resolveRedirect('/pending', member)).toBe('/Home')
+    expect(resolveRedirect('/tests/42/7/practice', member)).toBe('/tests')
+    expect(resolveRedirect('/whatever', member)).toBe('/Home')
+    expect(resolveRedirect('/tests/12/3/practice/listening', member)).toBeNull()
   })
 })
 

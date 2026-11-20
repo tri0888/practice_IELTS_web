@@ -21,7 +21,7 @@ interface AppLayoutProps {
   children: React.ReactNode
 }
 
-const PUBLIC_PAGES = ['/login', '/register', '/pending']
+const PUBLIC_PAGES = ['/login', '/register']
 
 function SidebarMenu() {
   const pathname = usePathname()
@@ -81,7 +81,7 @@ function LoadingScreen() {
 export default function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const { user, isLoading, isAuthenticated, isApproved, logout } = useAuth()
+  const { user, isLoading, isAuthenticated, logout } = useAuth()
   const isPublicPage = PUBLIC_PAGES.includes(pathname)
 
   // proxy.ts guards navigation server-side; this keeps the client in sync
@@ -92,25 +92,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
       router.replace('/login')
       return
     }
-    if (isAuthenticated && !isApproved && pathname !== '/pending') {
-      router.replace('/pending')
-      return
-    }
-    if (isAuthenticated && isApproved && pathname === '/pending') {
-      router.replace('/Home')
-      return
-    }
     // Reached an app page: the proxy accepted our cookies, reset the loop detector.
     if (isAuthenticated && !isPublicPage) {
       try { sessionStorage.removeItem(LOGIN_BOUNCE_KEY) } catch { /* ignore */ }
     }
-  }, [isApproved, isAuthenticated, isLoading, isPublicPage, pathname, router])
+  }, [isAuthenticated, isLoading, isPublicPage, pathname, router])
 
   if (isPublicPage) {
     return <>{children}</>
   }
 
-  if (isLoading || !isAuthenticated || !isApproved) {
+  if (isLoading || !isAuthenticated) {
     return <LoadingScreen />
   }
 

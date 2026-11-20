@@ -5,7 +5,6 @@ export type UserDoc = {
   id: string
   email: string
   name: string
-  role: string
   password_hash: string
   created_at?: string
   updated_at?: string

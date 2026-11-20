@@ -27,8 +27,8 @@ Khi thêm feature mới, tuân theo pattern này: tạo route mỏng trong `app/
 - Thông báo dùng `App.useApp().message`/`Popconfirm` của AntD, không dùng `alert()`/`confirm()`.
 
 ## Route Guard (proxy.ts)
-- `proxy.ts` (Next 16, trước đây là middleware) chặn việc tự gõ URL: chưa đăng nhập thì về `/login?next=`, tài khoản pending thì về `/pending`, số sách/đề không hợp lệ thì về `/tests`. Luật nằm trong `lib/routeGuard.ts` (có test ở `tests/routeGuard.test.ts`). Thêm route mới thì phải cập nhật `isKnownAppPath`.
-- Proxy đọc cookie `practice_hub_token`/`practice_hub_role` do `AuthProvider` ghi. Đặt `JWT_SECRET` (cùng giá trị với backend) cho frontend để proxy verify chữ ký; nếu thiếu thì proxy chỉ decode token và kiểm tra hạn dùng.
+- `proxy.ts` (Next 16, trước đây là middleware) chặn việc tự gõ URL: chưa đăng nhập thì về `/login?next=`, số sách/đề không hợp lệ thì về `/tests`. Luật nằm trong `lib/routeGuard.ts` (có test ở `tests/routeGuard.test.ts`). Thêm route mới thì phải cập nhật `isKnownAppPath`.
+- Proxy đọc cookie `practice_hub_token` do `AuthProvider` ghi. Đặt `JWT_SECRET` (cùng giá trị với backend) cho frontend để proxy verify chữ ký; nếu thiếu thì proxy chỉ decode token và kiểm tra hạn dùng.
 - Proxy chỉ là lớp chặn điều hướng; API vẫn tự xác thực mọi request `/api` (proxy không chạy cho `/api/*`).
 
 ## PDF Rendering

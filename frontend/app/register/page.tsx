@@ -45,7 +45,7 @@ export default function RegisterPage() {
           <div className="auth-brand-mark">Hub</div>
           <div>
             <h1>Create Account</h1>
-            <p>New accounts are created as pending until manually approved.</p>
+            <p>Sign up to start your IELTS and TOEIC practice.</p>
           </div>
         </div>
 

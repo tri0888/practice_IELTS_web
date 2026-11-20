@@ -22,7 +22,7 @@ Service API viết bằng TypeScript thuần trên Node.js 22.9+, dùng `node:ht
   - **Không thêm `rewrites` vào `vercel.json`**. Rewrite đổi `req.url` thành đích của nó (ví dụ `/api`), làm mọi GET ra trang health và mọi POST báo Not Found.
   - Không có thư mục `api/`. Giới hạn thời gian chạy (Max Duration) chỉnh ở *Vercel → Settings → Functions*.
 - `src/routes/<module>.routes.ts`: mỗi module một file routes, tất cả để chung trong thư mục `src/routes/`. Gồm `auth`, `practice`, `tests`, `attempts` (`/histories`), `audio`, `vocabulary`, `telegram`, và `health` (`/r2/status`, `/`). Mỗi file export một mảng `Route[]`, mỗi phần tử có `{ method, path, guard?, handler }`. Path dùng `:name` cho một đoạn, `:name*` cho cả phần đuôi còn lại (ví dụ `/audio/:file_name*`).
-- `src/middleware/middleware.ts`: guard `auth` (đọc token từ `?token=` hoặc `Authorization: Bearer`) và guard `approved`.
+- `src/middleware/middleware.ts`: guard `auth` (đọc token từ `?token=` hoặc `Authorization: Bearer`).
 - `src/modules/<name>/`: mỗi module có đúng 3 file:
   - `<name>.controllers.ts`: giao tiếp FE ↔ BE. Đọc params/query/body từ `ApiRequest`, gọi service, trả kết quả. Không chứa URL.
   - `<name>.services.ts`: logic, xử lý data. Không gọi MongoDB trực tiếp.
@@ -38,7 +38,8 @@ Service API viết bằng TypeScript thuần trên Node.js 22.9+, dùng `node:ht
 - **Giữ nguyên đường dẫn và dạng response của API**: frontend đọc `data.detail` (chuỗi) khi có lỗi. Lỗi 422 có dạng `"<field>: <message>"`.
 - Ném lỗi bằng `httpError(status, message)` ở bất kỳ tầng nào; `server.ts` sẽ trả `{detail}`. Controller trả object thường thì thành JSON 200; cần mã khác thì dùng `json(data, status)` hoặc `redirect(url)`.
 - **Không viết comment trong code.** Kiến thức cần ghi lại thì đưa vào file này.
-- Guard khai báo trên từng route trong `src/routes/*.routes.ts` (`guard: 'auth' | 'approved'`), không kiểm tra lại trong controller.
+- Guard khai báo trên từng route trong `src/routes/*.routes.ts` (`guard: 'auth'`), không kiểm tra lại trong controller.
+- Không có phân quyền hay duyệt tài khoản: ai đăng ký xong cũng đăng nhập và dùng được ngay. Tài khoản chỉ có `id`, `email`, `name`, `password_hash`; không có trường `role`. Tài khoản demo (`demo@gmail.com`) nằm trong `src/data/users.json`.
 - Thứ tự route quan trọng (match đầu tiên thắng): trong `server.ts`, `practiceRoutes` phải đứng trước `testsRoutes` (vì route generic `/tests/:book/:test/:skill`). Trong `tests.routes.ts`, route ETS `/tests/toeic/...` phải đứng trước `/tests/:book/...`.
 - Lỗi 401 khi token hết hạn có `detail` là `'Authentication token expired'`; token sai hoặc không tìm thấy user thì `'Invalid authentication token'`.
 - Thời gian lưu DB dùng `nowIso()`: chuỗi ISO **không có `Z`**, đúng định dạng dữ liệu đang có (sắp xếp `histories` theo `started_at` dựa vào đó).

@@ -15,12 +15,6 @@ export async function requireAuth(req: ApiRequest): Promise<void> {
   req.user = await getUserFromToken(token)
 }
 
-export async function requireApproved(req: ApiRequest): Promise<void> {
-  await requireAuth(req)
-  if (req.user!.role !== 'approved') throw httpError(403, 'Account is pending approval')
-}
-
 export const guards: Record<Guard, (req: ApiRequest) => Promise<void>> = {
   auth: requireAuth,
-  approved: requireApproved,
 }

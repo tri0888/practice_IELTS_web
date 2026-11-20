@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { decodeJwt, jwtVerify } from 'jose'
-import { AUTH_COOKIE, ROLE_COOKIE, resolveRedirect, type GuardSession } from '@/lib/routeGuard'
+import { AUTH_COOKIE, resolveRedirect, type GuardSession } from '@/lib/routeGuard'
 
 /**
  * Next.js 16 Proxy (formerly Middleware): runs before every page render and
@@ -14,7 +14,7 @@ import { AUTH_COOKIE, ROLE_COOKIE, resolveRedirect, type GuardSession } from '@/
  */
 async function readSession(req: NextRequest): Promise<GuardSession> {
   const token = req.cookies.get(AUTH_COOKIE)?.value
-  if (!token) return { authenticated: false, role: null }
+  if (!token) return { authenticated: false }
 
   try {
     const secret = process.env.JWT_SECRET
@@ -22,13 +22,11 @@ async function readSession(req: NextRequest): Promise<GuardSession> {
       ? (await jwtVerify(token, new TextEncoder().encode(secret), { algorithms: ['HS256'] })).payload
       : decodeJwt(token)
     if (typeof payload.exp === 'number' && payload.exp * 1000 < Date.now()) {
-      return { authenticated: false, role: null }
+      return { authenticated: false }
     }
-    // Role cookie is refreshed from /api/auth/me, so it reflects approvals made after login.
-    const role = req.cookies.get(ROLE_COOKIE)?.value || (payload.role as string | undefined) || null
-    return { authenticated: true, role }
+    return { authenticated: true }
   } catch {
-    return { authenticated: false, role: null }
+    return { authenticated: false }
   }
 }
 
@@ -44,7 +42,6 @@ export async function proxy(req: NextRequest) {
   const res = NextResponse.redirect(url)
   if (!session.authenticated && req.cookies.has(AUTH_COOKIE)) {
     res.cookies.delete(AUTH_COOKIE)
-    res.cookies.delete(ROLE_COOKIE)
   }
   return res
 }

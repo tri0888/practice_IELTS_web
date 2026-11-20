@@ -17,17 +17,17 @@ describe('passwords', () => {
 
 describe('tokens', () => {
   it('accepts tokens issued before (default secret)', () => {
-    expect(verifyToken(EXISTING_TOKEN)).toMatchObject({ sub: 'user-1', email: 'a@b.c', role: 'approved' })
+    expect(verifyToken(EXISTING_TOKEN)).toMatchObject({ sub: 'user-1', email: 'a@b.c' })
   })
 
   it('round-trips its own tokens', () => {
-    const payload = verifyToken(signToken({ id: 'u2', email: 'x@y.z', role: 'pending' }))
-    expect(payload).toMatchObject({ sub: 'u2', email: 'x@y.z', role: 'pending' })
+    const payload = verifyToken(signToken({ id: 'u2', email: 'x@y.z' }))
+    expect(payload).toMatchObject({ sub: 'u2', email: 'x@y.z' })
     expect(payload.exp! - payload.iat!).toBe(7 * 24 * 60 * 60)
   })
 
   it('rejects tampered tokens', () => {
-    const token = signToken({ id: 'u2', email: 'x@y.z', role: 'pending' })
+    const token = signToken({ id: 'u2', email: 'x@y.z' })
     expect(() => verifyToken(token.slice(0, -2) + 'xx')).toThrow(expect.objectContaining({ status: 401, detail: 'Invalid authentication token' }))
   })
 
